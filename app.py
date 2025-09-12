@@ -426,11 +426,89 @@ def parse_dt(s): return datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
 def parse_date(s): return datetime.strptime(s, "%Y-%m-%d").date()
 
 def normalize_phone(raw:str) -> str:
-    # deja solo dígitos, conserva posible "+" al inicio
     raw = (raw or "").strip()
     if raw.startswith('+'):
         return '+' + ''.join([c for c in raw[1:] if c.isdigit()])
     return ''.join([c for c in raw if c.isdigit()])
+
+# === Utilidades de interés mensual y vencimientos ===
+def last_interest_paid_dt(conn, loan_id:int) -> datetime|None:
+    r = conn.execute("SELECT MAX(paid_at) AS last FROM payments WHERE loan_id=? AND type='INTERES'", (loan_id,)).fetchone()
+    if r and r["last"]:
+        try:
+            return datetime.strptime(r["last"], "%Y-%m-%d %H:%M:%S")
+        except:
+            return None
+    return None
+
+def next_interest_due_date_raw(loan_row, last_int_dt:datetime|None, base_as_of:date|None=None) -> date:
+    """Próximo interés vence = (último pago de interés o fecha de inicio) + 30 días."""
+    start_dt = parse_dt(loan_row["created_at"])
+    ref_dt = last_int_dt or start_dt
+    candidate = (ref_dt + timedelta(days=30)).date()
+    return candidate
+
+def months_overdue_since(conn, loan_row, as_of_date:date) -> int:
+    """Meses enteros vencidos de interés desde último pago o inicio."""
+    last_int = last_interest_paid_dt(conn, loan_row["id"])
+    start = (last_int or parse_dt(loan_row["created_at"])).date()
+    if as_of_date <= start:
+        return 0
+    days = (as_of_date - start).days
+    return max(0, days // 30)
+
+def month_key(dt:date) -> str:
+    return dt.strftime("%Y-%m")
+
+def months_range_inclusive(y1:int,m1:int,y2:int,m2:int):
+    y, m = y1, m1
+    while (y < y2) or (y == y2 and m <= m2):
+        yield (y, m)
+        m += 1
+        if m > 12: m = 1; y += 1
+
+def months_between_inclusive(d1:date, d2:date) -> int:
+    return (d2.year - d1.year) * 12 + (d2.month - d1.month) + 1
+
+def monthly_interest(amount:float, monthly_rate_pct:float) -> float:
+    return float(amount) * (float(monthly_rate_pct)/100.0)
+
+def interest_due_as_of(loan_id:int, as_of_date:date, start_override:date|None=None) -> float:
+    """Interés pendiente desde el último pago de INTERES (o inicio) hasta as_of_date."""
+    with closing(get_db()) as conn:
+        loan = conn.execute("SELECT * FROM loans WHERE id=?", (loan_id,)).fetchone()
+        if not loan:
+            return 0.0
+        created_dt = parse_dt(loan["created_at"])
+        last_int = conn.execute(
+            "SELECT MAX(paid_at) AS last FROM payments WHERE loan_id=? AND type='INTERES'",
+            (loan_id,)
+        ).fetchone()
+        if start_override is not None:
+            start_dt = datetime.combine(start_override, datetime.min.time())
+        elif last_int and last_int["last"]:
+            start_dt = datetime.strptime(last_int["last"], "%Y-%m-%d %H:%M:%S")
+        else:
+            start_dt = created_dt
+
+        end_dt = datetime.combine(as_of_date, datetime.min.time())
+        days = (end_dt - start_dt).days
+        days = max(1, days)  # mínimo 1 día
+
+        monthly = (loan["interest_rate"] or 20)/100.0
+        daily = monthly/30.0
+        principal = float(loan["amount"] or 0.0)
+        return max(0.0, principal * daily * days)
+
+def monthly_interest_breakdown(loan_row, from_month:str, to_month:str):
+    """from_month / to_month en formato 'YYYY-MM'. Devuelve lista [(AAAA-MM, interes_mes)], total."""
+    y1, m1 = map(int, from_month.split("-"))
+    y2, m2 = map(int, to_month.split("-"))
+    months = list(months_range_inclusive(y1, m1, y2, m2))
+    per_month = monthly_interest(loan_row["amount"], loan_row["interest_rate"])
+    rows = [("%04d-%02d" % (y, m), per_month) for (y,m) in months]
+    total = per_month * len(months)
+    return rows, total
 
 # ======= DASHBOARD =======
 @app.route("/dashboard")
@@ -462,6 +540,9 @@ def dashboard():
         """, (d0, d1)).fetchone()
 
     body = f"""
+    <div class="flex gap-2 justify-end no-print mb-3">
+      <a href="{url_for('facturacion')}" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-900 font-semibold">🧾 Facturación</a>
+    </div>
     <section class="grid md:grid-cols-3 gap-4">
       <div class="glass rounded-2xl p-4">
         <div class="text-sm text-yellow-200/80">Empeños activos</div>
@@ -613,10 +694,16 @@ LIST_TPL = """
       </div>
       <input name="phone" placeholder="Teléfono" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
       <input name="photo" type="file" accept="image/*" capture="environment" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
       <div class="grid grid-cols-3 gap-2">
         <input name="interest_rate" type="number" step="0.01" value="{{ default_rate }}" class="rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
         <input name="due_date" type="date" value="{{ default_due }}" class="rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
         <button class="gold-gradient text-stone-900 font-semibold rounded-xl">Guardar</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-2 text-xs text-yellow-200/70">Opcional: establecer <b>fecha de inicio</b> (si el empeño fue días antes)</div>
+        <input name="start_date" type="date" class="rounded-xl border border-yellow-200/30 bg-black/40 p-2" />
       </div>
     </form>
   </section>
@@ -636,13 +723,16 @@ LIST_TPL = """
     </div>
     <div class="overflow-auto rounded-xl border border-yellow-200/30">
       <table class="min-w-full text-sm">
-        <thead class="thead-gold"><tr><th class="py-2 pl-3">#</th><th>Inicio</th><th>Artículo</th><th>Cliente</th><th>Monto</th><th>Vence</th><th>Estado</th><th class="no-print pr-3">Acciones</th></tr></thead>
+        <thead class="thead-gold"><tr><th class="py-2 pl-3">#</th><th>Inicio</th><th>Artículo</th><th>Cliente</th><th>Monto</th><th>Vence</th><th>Interés</th><th>Estado</th><th class="no-print pr-3">Acciones</th></tr></thead>
         <tbody class="divide-y divide-stone-800/40 bg-black/40">
         {% for r in rows %}
-          {% set days = ((now - parse_dt(r.created_at)).days) %}
+          {% set start_dt = parse_dt(r.created_at) %}
+          {% set last_int_dt = last_interest_paid_dt_fn(r.id) %}
+          {% set next_int_due = next_interest_due_date_fn(r, last_int_dt) %}
+          {% set overdue_m = months_overdue_fn(r, now.date()) %}
           {% set monthly = r.interest_rate or 20 %}
-          {% set interest = (r.amount or 0) * (monthly/100.0) * (days/30.0) %}
-          {% set total = (r.amount or 0) + interest %}
+          {% set monthly_amt = (r.amount or 0) * (monthly/100.0) %}
+          {% set interest_due_now = monthly_amt * overdue_m %}
           {% set overdue = r.due_date and (parse_date(r.due_date) < now.date()) %}
           {% set show_status = 'VENCIDO' if overdue and r.status!='RETIRADO' else r.status %}
           <tr>
@@ -655,7 +745,16 @@ LIST_TPL = """
             </td>
             <td>{{ r.customer_name }}</td>
             <td>${{ '%.2f'|format(r.amount or 0) }}</td>
-            <td>{{ r.due_date }}</td>
+            <td>
+              {{ r.due_date }}
+              <div class="text-xs text-yellow-200/70 mt-1">Próx. interés: <b>{{ next_int_due }}</b></div>
+            </td>
+            <td>
+              <div class="text-xs">/mes: ${{ '%.2f'|format(monthly_amt) }}</div>
+              <div class="text-xs">Atraso: {{ overdue_m }} mes(es)</div>
+              <div class="text-xs">Interés vencido: ${{ '%.2f'|format(interest_due_now) }}</div>
+              <a class="text-xs underline" href="{{ url_for('interest_calc_page', loan_id=r.id) }}">Ver meses</a>
+            </td>
             <td>{{ show_status }}</td>
             <td class="no-print">
               <div class="flex flex-wrap gap-2">
@@ -667,7 +766,7 @@ LIST_TPL = """
             </td>
           </tr>
         {% endfor %}
-        {% if not rows %}<tr><td class="py-2 pl-3" colspan="8">Sin resultados</td></tr>{% endif %}
+        {% if not rows %}<tr><td class="py-2 pl-3" colspan="9">Sin resultados</td></tr>{% endif %}
         </tbody>
       </table>
     </div>
@@ -701,15 +800,38 @@ def index():
     default_rate = float(get_setting("default_interest_rate","20"))
     term_days = int(get_setting("default_term_days","90"))
     default_due = (datetime.now() + timedelta(days=term_days)).strftime("%Y-%m-%d")
-    body = render_template_string(LIST_TPL, rows=rows, q=q, status=status, now=now, parse_dt=parse_dt, parse_date=parse_date,
-                                  default_rate=default_rate, default_due=default_due)
+    # helpers para plantilla
+    def _last_int_dt(loan_id:int):
+        with closing(get_db()) as c:
+            return last_interest_paid_dt(c, loan_id)
+    def _next_int_due(row, last_dt):
+        return next_interest_due_date_raw(row, last_dt).strftime("%Y-%m-%d")
+    def _months_overdue(row, as_of):
+        with closing(get_db()) as c:
+            return months_overdue_since(c, row, as_of)
+    body = render_template_string(
+        LIST_TPL, rows=rows, q=q, status=status, now=now, parse_dt=parse_dt, parse_date=parse_date,
+        default_rate=default_rate, default_due=default_due,
+        last_interest_paid_dt_fn=_last_int_dt, next_interest_due_date_fn=_next_int_due,
+        months_overdue_fn=_months_overdue
+    )
     return render_page(body, title="Empeños", active="loans")
 
 @app.route("/new", methods=["POST"])
 @login_required
 def new_loan():
     now_dt = datetime.now()
-    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    # Fecha de inicio opcional (permite backdating)
+    start_date_str = (request.form.get("start_date") or "").strip()
+    if start_date_str:
+        try:
+            start_dt = datetime.strptime(start_date_str, "%Y-%m-%d").replace(hour=9, minute=0, second=0)
+        except Exception:
+            start_dt = now_dt
+    else:
+        start_dt = now_dt
+    now_str = start_dt.strftime("%Y-%m-%d %H:%M:%S")
+
     item_name = request.form.get("item_name","").strip()
     weight_grams = float(request.form.get("weight_grams",0) or 0)
     customer_name = request.form.get("customer_name","").strip()
@@ -717,12 +839,12 @@ def new_loan():
     phone = request.form.get("phone","").strip()
     amount = float(request.form.get("amount",0) or 0)
     interest_rate = float(request.form.get("interest_rate", get_setting("default_interest_rate","20")))
-    due_date = request.form.get("due_date") or (now_dt + timedelta(days=int(get_setting("default_term_days","90")))).strftime("%Y-%m-%d")
+    due_date = request.form.get("due_date") or (start_dt + timedelta(days=int(get_setting("default_term_days","90")))).strftime("%Y-%m-%d")
 
     photo_path = ''
     file = request.files.get('photo')
     if file and getattr(file, 'filename',''):
-        fname = f"{int(now_dt.timestamp())}_" + secure_filename(file.filename)
+        fname = f"{int(time.time())}_" + secure_filename(file.filename)
         disk_path = UPLOAD_DIR / fname
         file.save(str(disk_path))
         photo_path = '/uploads/' + fname
@@ -735,7 +857,7 @@ def new_loan():
                         VALUES (?,?,?,?,?,?,?,?,?,?)""",
                      (now_str, item_name, weight_grams, customer_name, customer_id, phone, amount, interest_rate, due_date, photo_path))
         conn.execute("INSERT INTO cash_movements(when_at,concept,amount,ref) VALUES (?,?,?,?)",
-                     (now_str, f"Desembolso empeño {customer_name}", -amount, "LOAN"))
+                     (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), f"Desembolso empeño {customer_name}", -amount, "LOAN"))
         conn.commit()
     return redirect(url_for("index"))
 
@@ -812,12 +934,24 @@ TICKET_TPL = """
   <div class='text-sm space-y-1'>
     <div>Monto: <b>${{ '%.2f'|format(row.amount or 0) }}</b></div>
     <div>Interés mensual: <b>{{ '%.2f'|format(row.interest_rate) }}%</b></div>
-    <div>Vence: <b>{{ row.due_date }}</b></div>
+    <div>Vence (empeño): <b>{{ row.due_date }}</b></div>
+    <div>Próximo interés vence: <b>{{ next_interest_due }}</b></div>
     <div class='mt-2'>Interés acumulado hoy (mín. 1 día): <b>${{ '%.2f'|format(interest_today) }}</b></div>
     <div>Total a la fecha: <b>${{ '%.2f'|format(total_today) }}</b></div>
     <div class='my-2 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent'></div>
     <div>Interés al vencimiento (~{{ '%.0f'|format(months_to_due) }} meses): <b>${{ '%.2f'|format(interest_at_due) }}</b></div>
     <div>Total al vencimiento: <b>${{ '%.2f'|format(total_at_due) }}</b></div>
+    {% if m_rows %}
+      <div class='mt-3'>
+        <div class='font-semibold mb-1'>Desglose mensual estimado:</div>
+        <ul class='list-disc pl-5'>
+          {% for mk, mi in m_rows %}
+            <li>{{ mk }}: ${{ '%.2f'|format(mi) }}</li>
+          {% endfor %}
+        </ul>
+        <div class='mt-1'>Suma ({{ m_rows|length }} mes/es): <b>${{ '%.2f'|format(m_total) }}</b></div>
+      </div>
+    {% endif %}
   </div>
   <div class='mt-4 flex gap-2 justify-center no-print'>
     <button onclick='window.print()' class='px-4 py-2 rounded-xl bg-stone-900 text-yellow-300'>Imprimir</button>
@@ -831,7 +965,7 @@ TICKET_TPL = """
 </div>
 """
 
-def build_ticket_message(row, interest_today, total_today, interest_at_due, total_at_due):
+def build_ticket_message(row, interest_today, total_today, interest_at_due, total_at_due, next_interest_due):
     lines = [
         f"{APP_BRAND} - Recibo #{row['id']}",
         f"Fecha: {row['created_at'][:10]}",
@@ -839,7 +973,8 @@ def build_ticket_message(row, interest_today, total_today, interest_at_due, tota
         f"Artículo: {row['item_name']} - {row['weight_grams']:.2f} g",
         f"Capital: ${row['amount']:.2f}",
         f"Interés mensual: {row['interest_rate']:.2f}%",
-        f"Vence: {row['due_date']}",
+        f"Vence (empeño): {row['due_date']}",
+        f"Próximo interés: {next_interest_due}",
         f"Interés al día: ${interest_today:.2f}",
         f"Total a la fecha: ${total_today:.2f}",
         f"Interés al vencimiento: ${interest_at_due:.2f}",
@@ -852,8 +987,9 @@ def build_ticket_message(row, interest_today, total_today, interest_at_due, tota
 def ticket(loan_id: int):
     with closing(get_db()) as conn:
         row = conn.execute("SELECT * FROM loans WHERE id=?", (loan_id,)).fetchone()
+        last_int = last_interest_paid_dt(conn, loan_id)
     if not row: return "No encontrado", 404
-    created_dt = datetime.strptime(row["created_at"], "%Y-%m-%d %H:%M:%S")
+    created_dt = parse_dt(row["created_at"])
     now = datetime.now()
     days_elapsed = max(1, (now - created_dt).days)
     monthly_rate = (row["interest_rate"] or 20)/100
@@ -866,50 +1002,143 @@ def ticket(loan_id: int):
     interest_at_due = amount*monthly_rate*months_to_due
     total_at_due = amount + interest_at_due
 
-    # Enlaces WhatsApp / SMS
+    next_int_due = next_interest_due_date_raw(row, last_int).strftime("%Y-%m-%d")
+
+    from_m = request.args.get("from_m")
+    to_m = request.args.get("to_m")
+    m_rows = []
+    m_total = 0.0
+    if from_m and to_m:
+        m_rows, m_total = monthly_interest_breakdown(row, from_m, to_m)
+
     phone = normalize_phone(row["phone"])
     wa_url = None
     sms_url = None
-    msg = build_ticket_message(row, interest_today, total_today, interest_at_due, total_at_due)
+    msg = build_ticket_message(row, interest_today, total_today, interest_at_due, total_at_due, next_int_due)
     if phone:
         wa_url = f"https://wa.me/{phone}?text={quote_plus(msg)}"
-        # sms: schema (en escritorio puede no abrir; en móvil sí)
         sms_url = f"sms:{phone}?&body={quote_plus(msg)}"
 
     body = render_template_string(
         TICKET_TPL, row=row, interest_today=interest_today, total_today=total_today,
         months_to_due=months_to_due, interest_at_due=interest_at_due, total_at_due=total_at_due,
-        brand=APP_BRAND, wa_url=wa_url, sms_url=sms_url
+        brand=APP_BRAND, wa_url=wa_url, sms_url=sms_url,
+        next_interest_due=next_int_due, m_rows=m_rows, m_total=m_total
     )
     return render_page(body, title="Recibo", active="loans")
 
-# ====== Pagos con fechas (auto: interés -> capital) y renovación ======
+# ====== Estimador de interés mensual por rango ======
+INTEREST_CALC_TPL = """
+<div class="max-w-xl mx-auto glass p-6 rounded-2xl">
+  <h2 class="text-xl font-bold text-yellow-300 mb-3">Interés por meses — Empeño #{{ row.id }}</h2>
+  <form method="get" class="grid grid-cols-2 gap-2 mb-3">
+    <div>
+      <label class="text-xs">Desde (mes)</label>
+      <input type="month" name="from_m" value="{{ from_m or default_from }}" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    </div>
+    <div>
+      <label class="text-xs">Hasta (mes)</label>
+      <input type="month" name="to_m" value="{{ to_m or default_to }}" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    </div>
+    <div class="col-span-2">
+      <button class="gold-gradient text-stone-900 font-semibold px-4 py-2 rounded-xl">Calcular</button>
+      <a href="{{ url_for('index') }}" class="px-4 py-2 rounded-xl border border-yellow-200/30">Volver</a>
+    </div>
+  </form>
+
+  {% if rows is not none %}
+    <div class="overflow-auto rounded-xl border border-yellow-200/30">
+      <table class="min-w-full text-sm">
+        <thead class="thead-gold"><tr><th class="py-2 pl-3">Mes</th><th class="text-right pr-3">Interés</th></tr></thead>
+        <tbody class="divide-y divide-stone-800/40 bg-black/40">
+          {% for mk, mi in rows %}
+            <tr><td class="py-2 pl-3">{{ mk }}</td><td class="text-right pr-3">${{ '%.2f'|format(mi) }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-right mt-2">Total ({{ rows|length }} mes/es): <b>${{ '%.2f'|format(total) }}</b></div>
+  {% endif %}
+</div>
+"""
+
+@app.route("/interes/<int:loan_id>")
+@login_required
+def interest_calc_page(loan_id:int):
+    with closing(get_db()) as conn:
+        row = conn.execute("SELECT * FROM loans WHERE id=?", (loan_id,)).fetchone()
+    if not row: return "No encontrado", 404
+    start = parse_dt(row["created_at"]).date()
+    today = date.today()
+    default_from = f"{start.year:04d}-{start.month:02d}"
+    default_to = f"{today.year:04d}-{today.month:02d}"
+    from_m = request.args.get("from_m", default_from)
+    to_m = request.args.get("to_m", default_to)
+    rows = None
+    total = 0.0
+    if from_m and to_m:
+        rows, total = monthly_interest_breakdown(row, from_m, to_m)
+    body = render_template_string(INTEREST_CALC_TPL, row=row, rows=rows, total=total, from_m=from_m, to_m=to_m,
+                                  default_from=default_from, default_to=default_to)
+    return render_page(body, title="Interés por meses", active="loans")
+
+# ====== Pagos con fechas y modo de aplicación ======
 PAY_TPL = """
 <h2 class="text-xl font-bold text-yellow-300 mb-3">Pago — empeño #{{row.id}} ({{row.customer_name}})</h2>
 
 <div class="glass p-4 rounded-2xl mb-3 text-sm">
   <div>Capital actual: <b>${{ '%.2f'|format(row.amount) }}</b></div>
   <div>Interés estimado al <b>{{ as_of }}</b>: <b>${{ '%.2f'|format(interest_due) }}</b></div>
-  <p class="mt-2 text-yellow-200/80">El pago se imputará automáticamente: primero interés pendiente y el excedente al capital.</p>
+  <p class="mt-2 text-yellow-200/80">Elige cómo aplicar el pago y desde qué fecha calcular el interés.</p>
 </div>
 
 <form method="post" class="glass p-4 rounded-2xl space-y-3">
-  <div class="grid md:grid-cols-5 grid-cols-1 gap-2">
+  <div class="grid md:grid-cols-6 grid-cols-1 gap-2">
     <div class="md:col-span-2">
       <label class="text-xs">Desde (opcional)</label>
       <input name="from_date" type="date" value="{{ from_date or '' }}" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <p class="text-[11px] text-yellow-200/70 mt-1">Si lo dejas vacío, se usa el último pago de interés o la fecha inicial del empeño.</p>
+      <p class="text-[11px] text-yellow-200/70 mt-1">Si vacío: usa último pago de interés o la fecha inicial del empeño.</p>
     </div>
     <div class="md:col-span-2">
       <label class="text-xs">Hasta (fecha de pago efectiva)</label>
       <input name="as_of_date" type="date" value="{{ as_of }}" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <p class="text-[11px] text-yellow-200/70 mt-1">Los intereses se calculan hasta esta fecha.</p>
     </div>
-    <div>
+    <div class="md:col-span-2">
+      <label class="text-xs">Aplicar a</label>
+      <select name="apply_mode" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2">
+        <option value="AUTO" selected>AUTO (primero interés, resto a capital)</option>
+        <option value="SOLO_INTERES">SOLO INTERÉS (no abona capital)</option>
+        <option value="SOLO_CAPITAL">SOLO CAPITAL (no cubre interés)</option>
+      </select>
+    </div>
+    <div class="md:col-span-2">
       <label class="text-xs">Monto</label>
       <input name="amount" type="number" step="0.01" placeholder="0.00" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
     </div>
   </div>
+
+  <div class="grid md:grid-cols-2 grid-cols-1 gap-2">
+    <div>
+      <label class="text-xs">Rango (mes a mes) — opcional</label>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="month" name="from_m" class="rounded-xl border border-yellow-200/30 bg-black/40 p-2" />
+        <input type="month" name="to_m" class="rounded-xl border border-yellow-200/30 bg-black/40 p-2" />
+      </div>
+      <p class="text-[11px] text-yellow-200/70 mt-1">Ej.: Agosto a Diciembre para estimar suma de intereses.</p>
+    </div>
+    <div>
+      {% if m_rows %}
+        <div class="text-xs mb-1 font-semibold">Estimación seleccionada:</div>
+        <ul class="list-disc pl-5 text-xs">
+          {% for mk, mi in m_rows %}
+            <li>{{ mk }}: ${{ '%.2f'|format(mi) }}</li>
+          {% endfor %}
+        </ul>
+        <div class="text-xs mt-1">Total estimado: <b>${{ '%.2f'|format(m_total) }}</b></div>
+      {% endif %}
+    </div>
+  </div>
+
   <input name="notes" placeholder="Notas (opcional)" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
   <div class="flex gap-2">
     <button class="gold-gradient text-stone-900 font-semibold px-4 py-2 rounded-xl">Registrar</button>
@@ -917,34 +1146,6 @@ PAY_TPL = """
   </div>
 </form>
 """
-
-def interest_due_as_of(loan_id:int, as_of_date:date, start_override:date|None=None) -> float:
-    """Interés pendiente desde el último pago de INTERES (o inicio) hasta as_of_date.
-       start_override fuerza la fecha 'desde'. Mínimo 1 día."""
-    with closing(get_db()) as conn:
-        loan = conn.execute("SELECT * FROM loans WHERE id=?", (loan_id,)).fetchone()
-        if not loan:
-            return 0.0
-        created_dt = datetime.strptime(loan["created_at"], "%Y-%m-%d %H:%M:%S")
-        last_int = conn.execute(
-            "SELECT MAX(paid_at) AS last FROM payments WHERE loan_id=? AND type='INTERES'",
-            (loan_id,)
-        ).fetchone()
-        if start_override is not None:
-            start_dt = datetime.combine(start_override, datetime.min.time())
-        elif last_int and last_int["last"]:
-            start_dt = datetime.strptime(last_int["last"], "%Y-%m-%d %H:%M:%S")
-        else:
-            start_dt = created_dt
-
-        end_dt = datetime.combine(as_of_date, datetime.min.time())
-        days = (end_dt - start_dt).days
-        days = max(1, days)  # mínimo 1 día
-
-        monthly = (loan["interest_rate"] or 20)/100.0
-        daily = monthly/30.0
-        principal = float(loan["amount"] or 0.0)
-        return max(0.0, principal * daily * days)
 
 @app.route("/pago/<int:loan_id>")
 @login_required
@@ -969,10 +1170,19 @@ def payment_new_page(loan_id:int):
             start_override = None
 
     interest_due = interest_due_as_of(loan_id, as_of, start_override)
+
+    from_m = request.args.get("from_m")
+    to_m = request.args.get("to_m")
+    m_rows = None
+    m_total = 0.0
+    if from_m and to_m:
+        m_rows, m_total = monthly_interest_breakdown(row, from_m, to_m)
+
     return render_page(
         render_template_string(
             PAY_TPL, row=row, interest_due=interest_due, as_of=as_of.isoformat(),
-            from_date=(start_override.isoformat() if start_override else "")
+            from_date=(start_override.isoformat() if start_override else ""),
+            m_rows=m_rows, m_total=m_total
         ),
         title="Pago", active="loans"
     )
@@ -982,6 +1192,7 @@ def payment_new_page(loan_id:int):
 def payment_new(loan_id:int):
     amt = float(request.form.get("amount",0) or 0)
     notes = request.form.get("notes","").strip()
+    mode = (request.form.get("apply_mode","AUTO") or "AUTO").upper()
     if amt <= 0:
         return "Monto inválido", 400
 
@@ -993,6 +1204,7 @@ def payment_new(loan_id:int):
     start_override = None
     if from_str:
         try:
+            start_override
             start_override = datetime.strptime(from_str, "%Y-%m-%d").date()
         except Exception:
             start_override = None
@@ -1005,12 +1217,17 @@ def payment_new(loan_id:int):
         if not loan:
             return "No encontrado", 404
 
-        # Calcula interés pendiente
         interest_due = interest_due_as_of(loan_id, as_of, start_override)
 
-        # Imputación automática
         to_interest = min(amt, interest_due)
         to_principal = max(0.0, amt - to_interest)
+
+        if mode == "SOLO_INTERES":
+            to_interest = amt
+            to_principal = 0.0
+        elif mode == "SOLO_CAPITAL":
+            to_interest = 0.0
+            to_principal = amt
 
         if to_interest > 0:
             conn.execute(
@@ -1024,14 +1241,12 @@ def payment_new(loan_id:int):
             )
             conn.execute("UPDATE loans SET amount = amount - ? WHERE id=?", (round(to_principal,2), loan_id))
 
-        # Caja (ingreso)
         conn.execute(
             "INSERT INTO cash_movements(when_at,concept,amount,ref) VALUES (?,?,?,?)",
-            (now_ts, f"Pago AUTO empeño #{loan_id}", round(amt,2), "PAY")
+            (now_ts, f"Pago {mode} empeño #{loan_id}", round(amt,2), "PAY")
         )
 
-        # Renovación automática si cubre solo interés
-        fully_covered_interest = (abs(to_interest - interest_due) < 0.01)
+        fully_covered_interest = (mode!="SOLO_CAPITAL") and (abs(to_interest - interest_due) < 0.01)
         if fully_covered_interest and to_principal == 0.0:
             try:
                 renew_days = int(get_setting("renew_days","30") or "30")
@@ -1083,7 +1298,7 @@ def loan_delete(loan_id:int):
         conn.commit()
     return redirect(url_for("index"))
 
-# ====== Caja ======
+# ====== Caja (+ eliminar) ======
 CASH_TPL = """
 <h2 class="text-xl font-bold text-yellow-300 mb-3">Caja</h2>
 <form method="post" class="glass p-4 rounded-2xl space-y-2">
@@ -1098,15 +1313,40 @@ CASH_TPL = """
   <h3 class="font-semibold mb-2">Movimientos recientes</h3>
   <div class="overflow-auto rounded-xl border border-yellow-200/30">
     <table class="min-w-full text-sm">
-      <thead class="thead-gold"><tr><th class="py-2 pl-3">Fecha</th><th>Concepto</th><th>Ref</th><th class="text-right pr-3">Monto</th></tr></thead>
+      <thead class="thead-gold"><tr><th class="py-2 pl-3">#</th><th>Fecha</th><th>Concepto</th><th>Ref</th><th class="text-right pr-3">Monto</th><th class="text-right pr-3 no-print">Acciones</th></tr></thead>
       <tbody class="divide-y divide-stone-800/40 bg-black/40">
         {% for m in rows %}
-          <tr><td class="py-2 pl-3">{{ m.when_at }}</td><td>{{ m.concept }}</td><td>{{ m.ref or '' }}</td><td class="pr-3 text-right">${{ '%.2f'|format(m.amount) }}</td></tr>
+          <tr>
+            <td class="py-2 pl-3">{{ m.id }}</td>
+            <td>{{ m.when_at }}</td>
+            <td>{{ m.concept }}</td>
+            <td>{{ m.ref or '' }}</td>
+            <td class="pr-3 text-right">${{ '%.2f'|format(m.amount) }}</td>
+            <td class="pr-3 text-right no-print">
+              <a href="{{ url_for('cash_confirm_delete', mov_id=m.id) }}" class="px-2 py-1 bg-red-700 rounded hover:bg-red-800">Eliminar</a>
+            </td>
+          </tr>
         {% endfor %}
-        {% if not rows %}<tr><td class="py-2 pl-3" colspan="4">Sin movimientos</td></tr>{% endif %}
+        {% if not rows %}<tr><td class="py-2 pl-3" colspan="6">Sin movimientos</td></tr>{% endif %}
       </tbody>
     </table>
   </div>
+</div>
+"""
+
+CONFIRM_DELETE_CASH_TPL = """
+<div class="max-w-md mx-auto glass p-6 rounded-2xl">
+  <h2 class="text-xl font-bold text-yellow-300 mb-2">Eliminar movimiento de caja</h2>
+  <p class="text-sm mb-3">Vas a eliminar el movimiento <b>#{{ mov.id }}</b>: {{ mov.when_at }} — {{ mov.concept }} — ${{ '%.2f'|format(mov.amount) }}.</p>
+  {% if error %}<div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('cash_delete', mov_id=mov.id) }}" class="space-y-3">
+    <label class="text-xs">Confirma tu contraseña</label>
+    <input name="password" type="password" placeholder="Tu contraseña" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <div class="flex gap-2">
+      <button class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800">Eliminar definitivamente</button>
+      <a href="{{ url_for('cash') }}" class="px-4 py-2 rounded-xl border border-yellow-200/30">Cancelar</a>
+    </div>
+  </form>
 </div>
 """
 
@@ -1125,6 +1365,27 @@ def cash():
     with closing(get_db()) as conn:
         rows = conn.execute("SELECT * FROM cash_movements ORDER BY id DESC LIMIT 200").fetchall()
     return render_page(render_template_string(CASH_TPL, rows=rows), title="Caja", active="cash")
+
+@app.route("/caja/confirm/<int:mov_id>")
+@login_required
+def cash_confirm_delete(mov_id:int):
+    with closing(get_db()) as conn:
+        mov = conn.execute("SELECT * FROM cash_movements WHERE id=?", (mov_id,)).fetchone()
+    if not mov: return "No encontrado", 404
+    return render_page(render_template_string(CONFIRM_DELETE_CASH_TPL, mov=mov, error=None), title="Eliminar movimiento", active="cash")
+
+@app.route("/caja/delete/<int:mov_id>", methods=["POST"])
+@login_required
+def cash_delete(mov_id:int):
+    password = request.form.get("password","")
+    with closing(get_db()) as conn:
+        user = conn.execute("SELECT * FROM users WHERE id=?", (session.get("uid"),)).fetchone()
+        mov = conn.execute("SELECT * FROM cash_movements WHERE id=?", (mov_id,)).fetchone()
+        if not user or not check_password_hash(user["pass_hash"], password):
+            return render_page(render_template_string(CONFIRM_DELETE_CASH_TPL, mov=mov, error="Contraseña incorrecta"), title="Eliminar movimiento", active="cash")
+        conn.execute("DELETE FROM cash_movements WHERE id=?", (mov_id,))
+        conn.commit()
+    return redirect(url_for("cash"))
 
 # ====== Reportes ======
 REPORTS_TPL = """
@@ -1294,7 +1555,7 @@ def users_add():
             pass
     return redirect(url_for("settings_page"))
 
-# ====== INVENTARIO (artículos perdidos) ======
+# ====== INVENTARIO ======
 INVENTORY_TPL = """
 <h2 class="text-xl font-bold text-yellow-300 mb-3">Inventario — Artículos perdidos</h2>
 <section class="grid md:grid-cols-3 gap-6">
@@ -1390,7 +1651,7 @@ def inventory_delete(item_id:int):
         conn.commit()
     return redirect(url_for("inventory"))
 
-# ====== VENTAS (agregar, listar, vender, eliminar) ======
+# ====== VENTAS ======
 SALES_TPL = """
 <h2 class="text-xl font-bold text-yellow-300 mb-3">Ventas — Artículos en venta</h2>
 <section class="grid md:grid-cols-3 gap-6">
@@ -1536,6 +1797,53 @@ def users_page():
     <p class="glass p-4 rounded-2xl">La gestión completa de usuarios está en Configuración ➜ Usuarios.</p>
     """
     return render_page(body, title="Usuarios", active="users")
+
+# ====== Facturación (simple): abrir ticket por # de empeño ======
+FACT_TPL = """
+<div class="max-w-xl mx-auto glass p-6 rounded-2xl">
+  <h2 class="text-xl font-bold text-yellow-300 mb-3">Facturación</h2>
+  <form method="get" class="grid md:grid-cols-3 gap-2">
+    <div class="md:col-span-2">
+      <label class="text-xs"># de Empeño</label>
+      <input name="loan_id" type="number" min="1" placeholder="Ej. 101" class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    </div>
+    <div class="flex items-end">
+      <button class="gold-gradient text-stone-900 font-semibold px-4 py-2 rounded-xl">Abrir Ticket/Recibo</button>
+    </div>
+  </form>
+
+  <div class="mt-4 text-sm text-yellow-200/80">Tip: también puedes entrar desde Empeños ➜ “Recibo”.</div>
+
+  <h3 class="text-lg font-semibold mt-5 mb-2">Empeños recientes</h3>
+  <div class="overflow-auto rounded-xl border border-yellow-200/30">
+    <table class="min-w-full text-sm">
+      <thead class="thead-gold"><tr><th class="py-2 pl-3">#</th><th>Cliente</th><th>Artículo</th><th>Monto</th><th>Acción</th></tr></thead>
+      <tbody class="divide-y divide-stone-800/40 bg-black/40">
+        {% for r in rows %}
+          <tr>
+            <td class="py-2 pl-3">{{ r.id }}</td>
+            <td>{{ r.customer_name }}</td>
+            <td>{{ r.item_name }}</td>
+            <td>${{ '%.2f'|format(r.amount or 0) }}</td>
+            <td><a href="{{ url_for('ticket', loan_id=r.id) }}" class="px-2 py-1 border rounded">Abrir Ticket</a></td>
+          </tr>
+        {% endfor %}
+        {% if not rows %}<tr><td class="py-2 pl-3" colspan="5">Sin datos</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+"""
+
+@app.route("/facturacion")
+@login_required
+def facturacion():
+    loan_id = request.args.get("loan_id")
+    if loan_id and str(loan_id).isdigit():
+        return redirect(url_for("ticket", loan_id=int(loan_id)))
+    with closing(get_db()) as conn:
+        rows = conn.execute("SELECT id,customer_name,item_name,amount FROM loans ORDER BY id DESC LIMIT 20").fetchall()
+    return render_page(render_template_string(FACT_TPL, rows=rows), title="Facturación", active="dashboard")
 
 # ====== Main ======
 @app.route("/inicio")
