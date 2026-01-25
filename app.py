@@ -19,11 +19,6 @@ from flask import (
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
 
-@app.route("/empenos")
-def empenos_index():
-    return "<h2>📦 Módulo de Empeños OK</h2>"
-
-
 # =========================
 # PATHS
 # =========================
@@ -32,7 +27,6 @@ DB_PATH = BASE_DIR / "world_jewelry.db"
 
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_ITEMS = UPLOAD_DIR / "items"
-
 UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
 
 # =========================
@@ -147,9 +141,8 @@ def init_db():
         conn.commit()
 
 
-# 👉 SIEMPRE EJECUTAR (Render + local)
+# 👉 Ejecutar siempre (Render + local)
 init_db()
-
 
 # =========================
 # UPLOADS
@@ -157,7 +150,6 @@ init_db()
 @app.route("/uploads/items/<filename>")
 def item_photo(filename):
     return send_from_directory(UPLOAD_ITEMS, filename)
-
 
 # =========================
 # AUTH (TEMPORAL)
@@ -168,14 +160,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 # =========================
 # RUTAS BÁSICAS
 # =========================
 @app.route("/")
 def index():
     return "<h2>🟢 World Jewerly funcionando en Render</h2>"
-
 
 @app.route("/empenos")
 @login_required
@@ -191,7 +181,6 @@ def empenos_index():
     html += "</ul>"
 
     return html
-
 
 # =========================
 # SETTINGS
@@ -213,7 +202,6 @@ def get_setting(key, default=None):
             (key,)
         ).fetchone()
     return row["value"] if row else default
-
 
 # =========================
 # EMAIL
