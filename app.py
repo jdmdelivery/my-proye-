@@ -4,20 +4,16 @@
 from __future__ import annotations
 
 # =========================
-# IMPORTS BÁSICOS
+# IMPORTS
 # =========================
 import os
 import sqlite3
 import uuid
-import csv
-import io
-import sys
 import smtplib
 import ssl
-import secrets
 
 from contextlib import closing
-from datetime import datetime, timedelta, date
+from datetime import datetime
 from pathlib import Path
 from functools import wraps
 from email.mime.text import MIMEText
@@ -37,15 +33,17 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
 
 # =========================
-# BASE PATHS
+# PATHS
 # =========================
 BASE_DIR = Path(__file__).resolve().parent
-
-# =========================
-# DATABASE (SQLITE - RENDER)
-# =========================
 DB_PATH = BASE_DIR / "world_jewelry.db"
 
+UPLOAD_ITEMS = BASE_DIR / "uploads" / "items"
+UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
+
+# =========================
+# DATABASE
+# =========================
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -56,7 +54,6 @@ def init_db():
     with closing(get_db()) as conn:
         cur = conn.cursor()
 
-        # CLIENTES
         cur.execute("""
             CREATE TABLE IF NOT EXISTS clients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,7 +64,6 @@ def init_db():
             )
         """)
 
-        # EMPEÑOS / PRÉSTAMOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS loans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +76,6 @@ def init_db():
             )
         """)
 
-        # PAGOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS payments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,17 +87,31 @@ def init_db():
             )
         """)
 
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                pass_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'admin',
+                created_at TEXT NOT NULL
+            )
+        """)
+
         conn.commit()
 
-# 🔥 EJECUTAR SIEMPRE (Render + Local)
+# 🔥 EJECUTAR SIEMPRE
 init_db()
 
 # =========================
 # UPLOADS
 # =========================
-UPLOAD_ITEMS = BASE_DIR / "uploads" / "items"
-UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
-
 @app.route("/uploads/items/<filename>")
 def item_photo(filename):
     return send_from_directory(UPLOAD_ITEMS, filename)
@@ -117,13 +126,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
   font-size: 15px;
 }
-
 .glass {
   background: rgba(20,20,20,0.55);
   backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.08);
 }
-
 button, .btn {
   min-height: 48px;
   padding: 12px 18px;
@@ -137,162 +144,48 @@ button, .btn {
 APP_BRAND = "World Jewerly"
 
 # =========================
-# AUTH (TEMPORAL ABIERTO)
+# AUTH (TEMPORAL)
 # =========================
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        return f(*args, **kwargs)  # 🔓 acceso libre temporal
+        return f(*args, **kwargs)
     return decorated
 
-
-
-# ===== Rutas para .exe / desarrollo =====
-BASE_PATH = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-APPDATA_DIR = Path.home() / "WorldJewerlyData"
-APPDATA_DIR.mkdir(parents=True, exist_ok=True)
-
-DB_PATH = str(APPDATA_DIR / "empenos.db")
-STATIC_DIR = str(BASE_PATH / "static")
-UPLOAD_DIR = APPDATA_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
-app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
-app.secret_key = "cambia-esta-clave-secreta-por-una-larga-y-unica"  # IMPORTANTE: cámbiala en producción
-
-# ===== Esquema =====
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS loans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at TEXT NOT NULL,
-
-    item_name TEXT NOT NULL,
-    weight_grams REAL NOT NULL,
-
-    customer_name TEXT DEFAULT '',
-    customer_id TEXT DEFAULT '',
-
-    phone TEXT NOT NULL,
-
-    amount REAL NOT NULL,
-    interest_rate REAL NOT NULL,
-    due_date TEXT NOT NULL,
-
-    photo_path TEXT DEFAULT '',
-    id_front_path TEXT DEFAULT '',
-    id_back_path TEXT DEFAULT '',
-    signature_path TEXT DEFAULT '',
-
-    status TEXT NOT NULL DEFAULT 'ACTIVO',
-    redeemed_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    document TEXT NOT NULL,
-    phone TEXT,
-    address TEXT,
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    loan_id INTEGER NOT NULL,
-    paid_at TEXT NOT NULL,
-    amount REAL NOT NULL,
-    type TEXT NOT NULL,
-    notes TEXT,
-    FOREIGN KEY(loan_id) REFERENCES loans(id)
-);
-
-CREATE TABLE IF NOT EXISTS cash_movements (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    when_at TEXT NOT NULL,
-    concept TEXT NOT NULL,
-    amount REAL NOT NULL,
-    ref TEXT
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sales (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_desc TEXT NOT NULL,
-    price REAL NOT NULL,
-    sold_at TEXT,
-    status TEXT NOT NULL DEFAULT 'EN_VENTA'
-);
-
-CREATE TABLE IF NOT EXISTS inventory_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    item_desc TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'PERDIDO',
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    pass_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'admin',
-    created_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS password_resets (
-    token TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    expires_at TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY(user_id) REFERENCES users(id)
-);
-"""
-
-def get_db():
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
-
-
-
+# =========================
+# SETTINGS
+# =========================
 def set_setting(key, value):
     with closing(get_db()) as conn:
-        conn.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
+        conn.execute(
+            "INSERT INTO settings(key,value) VALUES(?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value))
+        )
         conn.commit()
-
-def ensure_users_columns():
-    with closing(get_db()) as conn:
-        cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
-
-        if "name" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
-        if "role" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
-
-        conn.commit()
-
-
 
 def get_setting(key, default=None):
     with closing(get_db()) as conn:
-        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
-    return (row["value"] if row else default)
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key=?",
+            (key,)
+        ).fetchone()
+    return row["value"] if row else default
 
-# ===== Email helper =====
-def send_email(to_email:str, subject:str, html_body:str) -> bool:
-    host = get_setting("smtp_host","")
-    port = int(get_setting("smtp_port","587") or 587)
-    user = get_setting("smtp_user","")
-    pwd  = get_setting("smtp_pass","")
+# =========================
+# EMAIL
+# =========================
+def send_email(to_email: str, subject: str, html_body: str) -> bool:
+    host = get_setting("smtp_host", "")
+    port = int(get_setting("smtp_port", "587") or 587)
+    user = get_setting("smtp_user", "")
+    pwd = get_setting("smtp_pass", "")
+
     msg = MIMEText(html_body, "html", "utf-8")
     msg["Subject"] = subject
     msg["From"] = user or "no-reply@localhost"
     msg["To"] = to_email
+
     if host and user and pwd:
         try:
             ctx = ssl.create_default_context()
@@ -302,23 +195,13 @@ def send_email(to_email:str, subject:str, html_body:str) -> bool:
                 s.send_message(msg)
             return True
         except Exception as e:
-            print("== ERROR SMTP ==>", e)
-            print("== CONTENIDO DEL CORREO (fallback) ==>\n", html_body)
+            print("SMTP ERROR:", e)
             return False
     else:
-        # Fallback: imprime en consola
-        print("== SMTP NO CONFIGURADO. MOSTRANDO CORREO EN CONSOLA ==")
-        print("Para:", to_email)
-        print("Asunto:", subject)
+        print("SMTP NO CONFIGURADO")
         print(html_body)
         return False
 
-# ====== Auth helpers ======
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        return f(*args, **kwargs)  # 🔓 acceso libre temporal
-    return decorated
 
 
 # ======= Páginas de autenticación =======
@@ -4512,6 +4395,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
