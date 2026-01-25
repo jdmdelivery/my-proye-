@@ -9,6 +9,51 @@ from datetime import datetime, timedelta, date
 
 app = Flask(__name__)
 app.secret_key = "world-jewelry"
+if os.environ.get("RENDER"):
+    init_db()
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    # CLIENTES
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_name TEXT,
+            last_name TEXT,
+            phone TEXT,
+            route TEXT
+        )
+    """)
+
+    # EMPEÑOS / PRÉSTAMOS
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS loans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            item_name TEXT,
+            amount REAL,
+            interest_rate REAL,
+            created_at TEXT,
+            status TEXT
+        )
+    """)
+
+    # PAGOS
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loan_id INTEGER,
+            amount REAL,
+            interest REAL,
+            capital REAL,
+            date TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
 
 from pathlib import Path
 from werkzeug.utils import secure_filename
@@ -77,6 +122,17 @@ from urllib.parse import quote_plus
 # ==============================
 # UI GLOBAL — iPHONE + GLASS MODE
 # ==============================
+
+import os
+import sqlite3
+
+DB_PATH = os.environ.get("DB_PATH", "world_jewelry.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 
 
@@ -4525,5 +4581,6 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
