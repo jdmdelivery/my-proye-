@@ -167,108 +167,6 @@ def login_required(f):
 def index():
     return "<h2>🟢 World Jewerly funcionando en Render</h2>"
 
-@app.route("/empenos")
-@login_required
-def empenos_index():
-    with closing(get_db()) as conn:
-        rows = conn.execute(
-            "SELECT * FROM loans ORDER BY id DESC"
-        ).fetchall()
-
-    html = """
-    <h3>📦 Empeños</h3>
-    <a href="/empenos/nuevo">➕ Nuevo empeño</a>
-    <ul>
-    """
-    for r in rows:
-        html += f"""
-        <li>
-            #{r['id']} — {r['item_name']} — ${r['amount']}
-            <a href="/empenos/{r['id']}">Ver</a>
-        </li>
-        """
-    html += "</ul>"
-
-    return html
-
-# =========================
-# NUEVO EMPEÑO
-# =========================
-@app.route("/empenos/nuevo", methods=["GET", "POST"])
-@login_required
-def empenos_nuevo():
-    if request.method == "POST":
-        item_name = request.form["item_name"]
-        customer_name = request.form["customer_name"]
-        phone = request.form["phone"]
-        amount = float(request.form["amount"])
-        interest_rate = float(request.form["interest_rate"])
-        due_date = request.form["due_date"]
-
-        with closing(get_db()) as conn:
-            conn.execute("""
-                INSERT INTO loans (
-                    created_at, item_name, customer_name, phone,
-                    amount, interest_rate, due_date
-                ) VALUES (datetime('now'),?,?,?,?,?,?)
-            """, (
-                item_name, customer_name, phone,
-                amount, interest_rate, due_date
-            ))
-            conn.commit()
-
-        return redirect(url_for("empenos_index"))
-
-    return """
-    <h3>📦 Nuevo Empeño</h3>
-    <form method="post">
-        Artículo:<br>
-        <input name="item_name"><br><br>
-
-        Cliente:<br>
-        <input name="customer_name"><br><br>
-
-        Teléfono:<br>
-        <input name="phone"><br><br>
-
-        Monto:<br>
-        <input name="amount" type="number" step="0.01"><br><br>
-
-        Interés %:<br>
-        <input name="interest_rate" type="number" step="0.01"><br><br>
-
-        Fecha vencimiento:<br>
-        <input name="due_date" type="date"><br><br>
-
-        <button>Guardar</button>
-    </form>
-    """
-# =========================
-# VER EMPEÑO
-# =========================
-@app.route("/empenos/<int:loan_id>")
-@login_required
-def empeno_ver(loan_id):
-    with closing(get_db()) as conn:
-        r = conn.execute(
-            "SELECT * FROM loans WHERE id=?",
-            (loan_id,)
-        ).fetchone()
-
-    if not r:
-        return "No encontrado", 404
-
-    return f"""
-    <h3>📄 Empeño #{r['id']}</h3>
-    Artículo: {r['item_name']}<br>
-    Cliente: {r['customer_name']}<br>
-    Teléfono: {r['phone']}<br>
-    Monto: ${r['amount']}<br>
-    Interés: {r['interest_rate']}%<br>
-    Vence: {r['due_date']}<br>
-    """
-
-
 # =========================
 # SETTINGS
 # =========================
@@ -4481,22 +4379,19 @@ def system_reset():
       {% endif %}
     </div>
     """, ERROR=ERROR, OK=OK)
-
-
+   
     
-    
+# =========================
+# MAIN (SOLO LOCAL)
+# =========================
 if __name__ == "__main__":
-    import os, time, threading, webbrowser
+    import os
 
-    def _open():
-        time.sleep(1.0)
-        webbrowser.open("http://127.0.0.1:5010")
-
+    # ⚠️ En Render NO se ejecuta app.run()
     if os.environ.get("RENDER") is None:
-        threading.Thread(target=_open, daemon=True).start()
+        print("🖥️ Ejecutando en modo local")
+        app.run(host="0.0.0.0", port=5010, debug=True)
 
-    print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
-    app.run(host="0.0.0.0", port=5010, debug=False)
 
 
 
