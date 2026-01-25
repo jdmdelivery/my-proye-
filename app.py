@@ -69,7 +69,7 @@ def init_db():
     with closing(get_db()) as conn:
         cur = conn.cursor()
 
-        # ===== CLIENTES
+        # CLIENTES
         cur.execute("""
             CREATE TABLE IF NOT EXISTS clients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +81,7 @@ def init_db():
             )
         """)
 
-        # ===== EMPEÑOS / PRÉSTAMOS
+        # EMPEÑOS / PRÉSTAMOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS loans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,7 +100,7 @@ def init_db():
             )
         """)
 
-        # ===== PAGOS
+        # PAGOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS payments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,6 +113,7 @@ def init_db():
         """)
 
         conn.commit()
+
 
 
 def migrate_db():
@@ -4540,6 +4541,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
