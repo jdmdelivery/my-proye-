@@ -4406,7 +4406,6 @@ def system_reset():
     
     
 if __name__ == "__main__":
-    # SOLO PARA DESARROLLO LOCAL
     import os, time, threading, webbrowser
 
     def _open():
@@ -4417,7 +4416,8 @@ if __name__ == "__main__":
         threading.Thread(target=_open, daemon=True).start()
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
-    app.run(debug=False, host="0.0.0.0", port=5010)
+    app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
