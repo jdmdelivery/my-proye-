@@ -67,6 +67,31 @@ def init_db():
     print("🟢 Inicializando base de datos...")
     with closing(get_db()) as conn:
         cur = conn.cursor()
+        def migrate_db():
+    print("🟡 Verificando columnas faltantes...")
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
+
+        cols = [r["name"] for r in cur.execute("PRAGMA table_info(loans)").fetchall()]
+
+        if "weight_grams" not in cols:
+            print("➕ Agregando columna weight_grams")
+            cur.execute("ALTER TABLE loans ADD COLUMN weight_grams REAL DEFAULT 0")
+
+        if "due_date" not in cols:
+            print("➕ Agregando columna due_date")
+            cur.execute("ALTER TABLE loans ADD COLUMN due_date TEXT")
+
+        if "photo_path" not in cols:
+            print("➕ Agregando columna photo_path")
+            cur.execute("ALTER TABLE loans ADD COLUMN photo_path TEXT")
+
+        if "redeemed_at" not in cols:
+            print("➕ Agregando columna redeemed_at")
+            cur.execute("ALTER TABLE loans ADD COLUMN redeemed_at TEXT")
+
+        conn.commit()
+
 
         # ===== CLIENTES (simple, como tú lo usas en empeños)
         cur.execute("""
@@ -174,32 +199,6 @@ def init_db():
 
 # 🔥 EJECUTAR SIEMPRE
 init_db()
-
-    def migrate_db():
-    print("🟡 Verificando columnas faltantes...")
-    with closing(get_db()) as conn:
-        cur = conn.cursor()
-
-        # columnas actuales de loans
-        cols = [r["name"] for r in cur.execute("PRAGMA table_info(loans)").fetchall()]
-
-        if "weight_grams" not in cols:
-            print("➕ Agregando columna weight_grams")
-            cur.execute("ALTER TABLE loans ADD COLUMN weight_grams REAL DEFAULT 0")
-
-        if "due_date" not in cols:
-            print("➕ Agregando columna due_date")
-            cur.execute("ALTER TABLE loans ADD COLUMN due_date TEXT")
-
-        if "photo_path" not in cols:
-            print("➕ Agregando columna photo_path")
-            cur.execute("ALTER TABLE loans ADD COLUMN photo_path TEXT")
-
-        if "redeemed_at" not in cols:
-            print("➕ Agregando columna redeemed_at")
-            cur.execute("ALTER TABLE loans ADD COLUMN redeemed_at TEXT")
-
-        conn.commit()
 
 
 # =========================
@@ -4488,6 +4487,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
