@@ -38,55 +38,113 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     print("🟢 Inicializando base de datos...")
     with closing(get_db()) as conn:
         cur = conn.cursor()
 
+        # ===== CLIENTES
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS clients (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                document TEXT,
-                phone TEXT,
-                address TEXT,
-                created_at TEXT
-            )
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            document TEXT,
+            phone TEXT,
+            address TEXT,
+            created_at TEXT
+        )
         """)
 
+        # ===== EMPEÑOS / PRÉSTAMOS
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS loans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                created_at TEXT,
-                item_name TEXT,
-                weight_grams REAL DEFAULT 0,
-                customer_name TEXT,
-                customer_id TEXT,
-                phone TEXT,
-                amount REAL,
-                interest_rate REAL,
-                due_date TEXT,
-                photo_path TEXT,
-                status TEXT DEFAULT 'ACTIVO',
-                redeemed_at TEXT
-            )
+        CREATE TABLE IF NOT EXISTS loans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT,
+            item_name TEXT,
+            weight_grams REAL DEFAULT 0,
+            customer_name TEXT,
+            customer_id TEXT,
+            phone TEXT,
+            amount REAL,
+            interest_rate REAL,
+            due_date TEXT,
+            photo_path TEXT,
+            status TEXT DEFAULT 'ACTIVO',
+            redeemed_at TEXT
+        )
         """)
 
+        # ===== PAGOS
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS payments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                loan_id INTEGER,
-                paid_at TEXT,
-                amount REAL,
-                type TEXT,
-                notes TEXT
-            )
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loan_id INTEGER,
+            paid_at TEXT,
+            amount REAL,
+            type TEXT,
+            notes TEXT
+        )
+        """)
+
+        # ===== CAJA
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS cash_movements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            when_at TEXT,
+            concept TEXT,
+            amount REAL,
+            ref TEXT
+        )
+        """)
+
+        # ===== VENTAS
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_desc TEXT,
+            price REAL,
+            sold_at TEXT,
+            status TEXT DEFAULT 'EN_VENTA'
+        )
+        """)
+
+        # ===== INVENTARIO
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS inventory_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_desc TEXT,
+            status TEXT DEFAULT 'PERDIDO',
+            created_at TEXT
+        )
+        """)
+
+        # ===== USUARIOS
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            username TEXT UNIQUE,
+            pass_hash TEXT,
+            role TEXT DEFAULT 'admin',
+            created_at TEXT
+        )
+        """)
+
+        # ===== SETTINGS
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
         """)
 
         conn.commit()
 
-# 👉 SIEMPRE EJECUTAR
+
+# 👉 SIEMPRE EJECUTAR (Render + local)
 init_db()
+
 
 # =========================
 # UPLOADS
@@ -95,6 +153,7 @@ init_db()
 def item_photo(filename):
     return send_from_directory(UPLOAD_ITEMS, filename)
 
+
 # =========================
 # AUTH (TEMPORAL)
 # =========================
@@ -104,18 +163,22 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
 # =========================
-# RUTA DE PRUEBA
+# RUTAS BÁSICAS
 # =========================
 @app.route("/")
 def index():
     return "<h2>🟢 World Jewerly funcionando en Render</h2>"
 
+
 @app.route("/empenos")
 @login_required
 def empenos_index():
     with closing(get_db()) as conn:
-        rows = conn.execute("SELECT * FROM loans ORDER BY id DESC").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM loans ORDER BY id DESC"
+        ).fetchall()
 
     html = "<h3>📦 Empeños</h3><ul>"
     for r in rows:
@@ -124,42 +187,6 @@ def empenos_index():
 
     return html
 
-
-# =========================
-# ESTILO GLOBAL
-# =========================
-GLOBAL_IOS_STYLE = """
-<style>
-body {
-  background: linear-gradient(180deg, #0b0b0b, #111);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  font-size: 15px;
-}
-.glass {
-  background: rgba(20,20,20,0.55);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-button, .btn {
-  min-height: 48px;
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
-}
-</style>
-"""
-
-APP_BRAND = "World Jewerly"
-
-# =========================
-# AUTH (TEMPORAL)
-# =========================
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        return f(*args, **kwargs)
-    return decorated
 
 # =========================
 # SETTINGS
@@ -173,6 +200,7 @@ def set_setting(key, value):
         )
         conn.commit()
 
+
 def get_setting(key, default=None):
     with closing(get_db()) as conn:
         row = conn.execute(
@@ -180,6 +208,7 @@ def get_setting(key, default=None):
             (key,)
         ).fetchone()
     return row["value"] if row else default
+
 
 # =========================
 # EMAIL
@@ -4389,6 +4418,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
