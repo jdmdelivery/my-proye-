@@ -1090,23 +1090,15 @@ LOANS_LIST_TPL = """
 
 
 @app.route("/")
-def __root():
+def root():
     return redirect(url_for("empenos_index"))
 
-
-@app.route("/index")
-@login_required
-def index():
-    return redirect(url_for("empenos_index"))
-    
-@app.route("/clients")
-@login_required
-def clients():
-    return redirect(url_for("empenos_index"))
 
 @app.route("/empenos")
 @login_required
 def empenos_index():
+    return "Empeños OK"  # aquí va tu código real
+
 
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "TODOS")
@@ -4404,6 +4396,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
