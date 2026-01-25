@@ -63,11 +63,59 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     print("🟢 Inicializando base de datos...")
     with closing(get_db()) as conn:
         cur = conn.cursor()
-        def migrate_db():
+
+        # ===== CLIENTES
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS clients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                document TEXT,
+                phone TEXT,
+                address TEXT,
+                created_at TEXT
+            )
+        """)
+
+        # ===== EMPEÑOS / PRÉSTAMOS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS loans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT,
+                item_name TEXT,
+                weight_grams REAL DEFAULT 0,
+                customer_name TEXT,
+                customer_id TEXT,
+                phone TEXT,
+                amount REAL,
+                interest_rate REAL,
+                due_date TEXT,
+                photo_path TEXT,
+                status TEXT DEFAULT 'ACTIVO',
+                redeemed_at TEXT
+            )
+        """)
+
+        # ===== PAGOS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                loan_id INTEGER,
+                paid_at TEXT,
+                amount REAL,
+                type TEXT,
+                notes TEXT
+            )
+        """)
+
+        conn.commit()
+
+
+def migrate_db():
     print("🟡 Verificando columnas faltantes...")
     with closing(get_db()) as conn:
         cur = conn.cursor()
@@ -75,22 +123,27 @@ def init_db():
         cols = [r["name"] for r in cur.execute("PRAGMA table_info(loans)").fetchall()]
 
         if "weight_grams" not in cols:
-            print("➕ Agregando columna weight_grams")
+            print("➕ Agregando weight_grams")
             cur.execute("ALTER TABLE loans ADD COLUMN weight_grams REAL DEFAULT 0")
 
         if "due_date" not in cols:
-            print("➕ Agregando columna due_date")
+            print("➕ Agregando due_date")
             cur.execute("ALTER TABLE loans ADD COLUMN due_date TEXT")
 
         if "photo_path" not in cols:
-            print("➕ Agregando columna photo_path")
+            print("➕ Agregando photo_path")
             cur.execute("ALTER TABLE loans ADD COLUMN photo_path TEXT")
 
         if "redeemed_at" not in cols:
-            print("➕ Agregando columna redeemed_at")
+            print("➕ Agregando redeemed_at")
             cur.execute("ALTER TABLE loans ADD COLUMN redeemed_at TEXT")
 
         conn.commit()
+
+
+# 🔥 EJECUTAR SIEMPRE (Render + local)
+init_db()
+migrate_db()
 
 
         # ===== CLIENTES (simple, como tú lo usas en empeños)
