@@ -35,15 +35,20 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # =========================
-# FLASK APP
+# FLASK APP (UNA SOLA VEZ)
 # =========================
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
 
 # =========================
-# DATABASE (SQLITE)
+# BASE PATHS
 # =========================
-DB_PATH = os.environ.get("DB_PATH", "world_jewelry.db")
+BASE_DIR = Path(__file__).resolve().parent
+
+# =========================
+# DATABASE (SQLITE - RENDER)
+# =========================
+DB_PATH = BASE_DIR / "world_jewelry.db"
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -51,6 +56,7 @@ def get_db():
     return conn
 
 def init_db():
+    print("🟢 Inicializando base de datos...")
     conn = get_db()
     cur = conn.cursor()
 
@@ -100,14 +106,16 @@ if os.environ.get("RENDER"):
 # =========================
 # UPLOADS
 # =========================
-BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_ITEMS = BASE_DIR / "uploads" / "items"
 UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
 
 @app.route("/uploads/items/<filename>")
 def item_photo(filename):
-    return send_from_directory("uploads/items", filename)
+    return send_from_directory(UPLOAD_ITEMS, filename)
 
+# =========================
+# ESTILO GLOBAL
+# =========================
 GLOBAL_IOS_STYLE = """
 <style>
 body {
@@ -185,8 +193,8 @@ input, select, textarea {
 </style>
 """
 
-
 APP_BRAND = "World Jewerly"
+
 
 # ===== Rutas para .exe / desarrollo =====
 BASE_PATH = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -4553,6 +4561,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
