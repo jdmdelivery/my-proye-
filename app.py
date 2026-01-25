@@ -19,6 +19,11 @@ from flask import (
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
 
+@app.route("/empenos")
+def empenos_index():
+    return "<h2>📦 Módulo de Empeños OK</h2>"
+
+
 # =========================
 # PATHS
 # =========================
@@ -4417,6 +4422,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
