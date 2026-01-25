@@ -1,5 +1,5 @@
 # app.py
-# World Jewerly — Sistema modular
+# World Jewerly — Sistema modular (RENDER)
 
 from __future__ import annotations
 
@@ -8,9 +8,6 @@ from __future__ import annotations
 # =========================
 import os
 import sqlite3
-import threading
-import time
-import webbrowser
 import uuid
 import csv
 import io
@@ -23,11 +20,10 @@ from contextlib import closing
 from datetime import datetime, timedelta, date
 from pathlib import Path
 from functools import wraps
-from urllib.parse import quote_plus
 from email.mime.text import MIMEText
 
 from flask import (
-    Flask, request, redirect, url_for, Response,
+    Flask, request, redirect, url_for,
     render_template_string, send_from_directory, session
 )
 
@@ -57,51 +53,49 @@ def get_db():
 
 def init_db():
     print("🟢 Inicializando base de datos...")
-    conn = get_db()
-    cur = conn.cursor()
+    with closing(get_db()) as conn:
+        cur = conn.cursor()
 
-    # CLIENTES
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS clients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            first_name TEXT,
-            last_name TEXT,
-            phone TEXT,
-            route TEXT
-        )
-    """)
+        # CLIENTES
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS clients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT,
+                last_name TEXT,
+                phone TEXT,
+                route TEXT
+            )
+        """)
 
-    # EMPEÑOS / PRÉSTAMOS
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS loans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_id INTEGER,
-            item_name TEXT,
-            amount REAL,
-            interest_rate REAL,
-            created_at TEXT,
-            status TEXT
-        )
-    """)
+        # EMPEÑOS / PRÉSTAMOS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS loans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER,
+                item_name TEXT,
+                amount REAL,
+                interest_rate REAL,
+                created_at TEXT,
+                status TEXT
+            )
+        """)
 
-    # PAGOS
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            loan_id INTEGER,
-            amount REAL,
-            interest REAL,
-            capital REAL,
-            date TEXT
-        )
-    """)
+        # PAGOS
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                loan_id INTEGER,
+                amount REAL,
+                interest REAL,
+                capital REAL,
+                date TEXT
+            )
+        """)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
 
-# 👉 CREAR TABLAS AUTOMÁTICAMENTE EN RENDER
-if os.environ.get("RENDER"):
-    init_db()
+# 🔥 EJECUTAR SIEMPRE (Render + Local)
+init_db()
 
 # =========================
 # UPLOADS
@@ -127,73 +121,30 @@ body {
 .glass {
   background: rgba(20,20,20,0.55);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
 
-button, a.btn, .btn {
+button, .btn {
   min-height: 48px;
   padding: 12px 18px;
   border-radius: 14px;
   font-size: 16px;
   font-weight: 700;
 }
-
-.gold-gradient {
-  background: linear-gradient(135deg, #facc15, #f59e0b);
-  color: #000;
-}
-
-input, select, textarea {
-  min-height: 48px;
-  border-radius: 14px;
-  font-size: 16px;
-}
-
-.empeno-ficha {
-  background: rgba(0,0,0,0.35);
-  border-radius: 18px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-
-.ficha-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.ficha-actions a {
-  flex: 1 1 45%;
-  text-align: center;
-  border-radius: 14px;
-  padding: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #facc15;
-  font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  table { display: block; }
-  thead { display: none; }
-  tr {
-    display: block;
-    margin-bottom: 12px;
-    border-radius: 18px;
-    background: rgba(0,0,0,0.35);
-    padding: 10px;
-  }
-  td {
-    display: block;
-    padding: 6px 0;
-  }
-}
 </style>
 """
 
 APP_BRAND = "World Jewerly"
+
+# =========================
+# AUTH (TEMPORAL ABIERTO)
+# =========================
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        return f(*args, **kwargs)  # 🔓 acceso libre temporal
+    return decorated
+
 
 
 # ===== Rutas para .exe / desarrollo =====
@@ -4561,6 +4512,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
