@@ -3,35 +3,18 @@
 
 from __future__ import annotations
 
-# =========================
-# IMPORTS
-# =========================
 import os
 import sqlite3
-import uuid
-import smtplib
-import ssl
-import io
-import csv
-import time
-import secrets
-
-from contextlib import closing
-from datetime import datetime, date, timedelta
 from pathlib import Path
+from contextlib import closing
 from functools import wraps
-from email.mime.text import MIMEText
-
 from flask import (
     Flask, request, redirect, url_for,
-    render_template_string, send_from_directory, session, Response
+    render_template_string, send_from_directory
 )
 
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
-
 # =========================
-# FLASK APP (UNA SOLA VEZ)
+# FLASK APP
 # =========================
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
@@ -43,17 +26,9 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "world_jewelry.db"
 
 UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
 UPLOAD_ITEMS = UPLOAD_DIR / "items"
+
 UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
-
-UPLOAD_LEGAL = UPLOAD_DIR / "legal"
-UPLOAD_LEGAL.mkdir(parents=True, exist_ok=True)
-
-# para la ruta /uploads/<file>
-app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
-
 
 # =========================
 # DATABASE
@@ -63,13 +38,11 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-
 def init_db():
     print("🟢 Inicializando base de datos...")
     with closing(get_db()) as conn:
         cur = conn.cursor()
 
-        # CLIENTES
         cur.execute("""
             CREATE TABLE IF NOT EXISTS clients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +54,6 @@ def init_db():
             )
         """)
 
-        # EMPEÑOS / PRÉSTAMOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS loans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,7 +72,6 @@ def init_db():
             )
         """)
 
-        # PAGOS
         cur.execute("""
             CREATE TABLE IF NOT EXISTS payments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,146 +85,8 @@ def init_db():
 
         conn.commit()
 
-
-
-def migrate_db():
-    print("🟡 Verificando columnas faltantes...")
-    with closing(get_db()) as conn:
-        cur = conn.cursor()
-
-        cols = [r["name"] for r in cur.execute("PRAGMA table_info(loans)").fetchall()]
-
-        if "weight_grams" not in cols:
-            print("➕ Agregando weight_grams")
-            cur.execute("ALTER TABLE loans ADD COLUMN weight_grams REAL DEFAULT 0")
-
-        if "due_date" not in cols:
-            print("➕ Agregando due_date")
-            cur.execute("ALTER TABLE loans ADD COLUMN due_date TEXT")
-
-        if "photo_path" not in cols:
-            print("➕ Agregando photo_path")
-            cur.execute("ALTER TABLE loans ADD COLUMN photo_path TEXT")
-
-        if "redeemed_at" not in cols:
-            print("➕ Agregando redeemed_at")
-            cur.execute("ALTER TABLE loans ADD COLUMN redeemed_at TEXT")
-
-        conn.commit()
-
-
-# 🔥 EJECUTAR SIEMPRE (Render + local)
+# 👉 SIEMPRE EJECUTAR
 init_db()
-migrate_db()
-
-
-        # ===== CLIENTES (simple, como tú lo usas en empeños)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS clients (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                document TEXT,
-                phone TEXT,
-                address TEXT,
-                created_at TEXT
-            )
-        """)
-
-        # ===== EMPEÑOS (LOANS) — con TODAS las columnas que tu app usa
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS loans (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                created_at TEXT NOT NULL,
-                due_date TEXT,
-
-                customer_name TEXT,
-                customer_id TEXT,
-                phone TEXT,
-
-                item_name TEXT,
-                weight_grams REAL DEFAULT 0,
-
-                amount REAL DEFAULT 0,
-                interest_rate REAL DEFAULT 20,
-
-                photo_path TEXT,
-
-                status TEXT DEFAULT 'ACTIVO',
-                redeemed_at TEXT
-            )
-        """)
-
-        # ===== PAGOS — tu código usa: paid_at, type, notes, amount
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS payments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                loan_id INTEGER NOT NULL,
-                paid_at TEXT NOT NULL,
-                type TEXT NOT NULL,     -- 'INTERES' o 'ABONO'
-                amount REAL NOT NULL,
-                notes TEXT,
-                FOREIGN KEY (loan_id) REFERENCES loans(id)
-            )
-        """)
-
-        # ===== CAJA
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS cash_movements (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                when_at TEXT NOT NULL,
-                concept TEXT NOT NULL,
-                amount REAL NOT NULL,
-                ref TEXT
-            )
-        """)
-
-        # ===== VENTAS
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS sales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_desc TEXT NOT NULL,
-                price REAL NOT NULL,
-                status TEXT NOT NULL DEFAULT 'EN_VENTA',
-                sold_at TEXT
-            )
-        """)
-
-        # ===== PASSWORD RESETS (tu recover/reset lo usa)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS password_resets (
-                token TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                expires_at TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
-
-        # ===== SETTINGS
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            )
-        """)
-
-        # ===== USERS (tu UI usa name + role)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                username TEXT UNIQUE NOT NULL,
-                pass_hash TEXT NOT NULL,
-                role TEXT NOT NULL DEFAULT 'admin',
-                created_at TEXT NOT NULL
-            )
-        """)
-
-        conn.commit()
-
-# 🔥 EJECUTAR SIEMPRE
-init_db()
-
 
 # =========================
 # UPLOADS
@@ -261,6 +94,36 @@ init_db()
 @app.route("/uploads/items/<filename>")
 def item_photo(filename):
     return send_from_directory(UPLOAD_ITEMS, filename)
+
+# =========================
+# AUTH (TEMPORAL)
+# =========================
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        return f(*args, **kwargs)
+    return decorated
+
+# =========================
+# RUTA DE PRUEBA
+# =========================
+@app.route("/")
+def index():
+    return "<h2>🟢 World Jewerly funcionando en Render</h2>"
+
+@app.route("/empenos")
+@login_required
+def empenos_index():
+    with closing(get_db()) as conn:
+        rows = conn.execute("SELECT * FROM loans ORDER BY id DESC").fetchall()
+
+    html = "<h3>📦 Empeños</h3><ul>"
+    for r in rows:
+        html += f"<li>{r['item_name']} - ${r['amount']}</li>"
+    html += "</ul>"
+
+    return html
+
 
 # =========================
 # ESTILO GLOBAL
@@ -4541,6 +4404,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
