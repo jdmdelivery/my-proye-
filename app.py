@@ -2,15 +2,54 @@
 # World Jewerly — Sistema modular
 
 from __future__ import annotations
-from flask import Flask, request, redirect, url_for, Response, render_template_string, send_from_directory, session
+
+# =========================
+# IMPORTS BÁSICOS
+# =========================
+import os
 import sqlite3
+import threading
+import time
+import webbrowser
+import uuid
+import csv
+import io
+import sys
+import smtplib
+import ssl
+import secrets
+
 from contextlib import closing
 from datetime import datetime, timedelta, date
+from pathlib import Path
+from functools import wraps
+from urllib.parse import quote_plus
+from email.mime.text import MIMEText
 
+from flask import (
+    Flask, request, redirect, url_for, Response,
+    render_template_string, send_from_directory, session
+)
+
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# =========================
+# FLASK APP
+# =========================
 app = Flask(__name__)
-app.secret_key = "world-jewelry"
-if os.environ.get("RENDER"):
-    init_db()
+app.secret_key = os.environ.get("SECRET_KEY", "world-jewelry")
+
+# =========================
+# DATABASE (SQLITE)
+# =========================
+DB_PATH = os.environ.get("DB_PATH", "world_jewelry.db")
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -54,87 +93,20 @@ def init_db():
     conn.commit()
     conn.close()
 
+# 👉 CREAR TABLAS AUTOMÁTICAMENTE EN RENDER
+if os.environ.get("RENDER"):
+    init_db()
 
-from pathlib import Path
-from werkzeug.utils import secure_filename
-import uuid
-
+# =========================
+# UPLOADS
+# =========================
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_ITEMS = BASE_DIR / "uploads" / "items"
-
-# crear carpeta automáticamente
 UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
 
-
-# =========================
-# SERVIR FOTOS DE ARTÍCULOS
-# =========================
 @app.route("/uploads/items/<filename>")
 def item_photo(filename):
     return send_from_directory("uploads/items", filename)
-
-
-
-# ======================================================
-# 🔢 INTERÉS AUTOMÁTICO POR RANGO DE FECHAS (MENSUAL)
-# ======================================================
-from datetime import date
-
-def calcular_interes_por_fechas(
-    capital: float,
-    tasa_mensual: float,
-    fecha_desde: date,
-    fecha_hasta: date
-) -> float:
-    """
-    Interés prorrateado por días usando tasa mensual.
-    Ejemplo:
-      10000 al 20% por 3 días:
-      10000 * 0.20 * (3 / 30)
-    """
-
-    if not fecha_desde or not fecha_hasta:
-        return 0.0
-
-    dias = (fecha_hasta - fecha_desde).days
-
-    if dias <= 0:
-        dias = 1  # mínimo 1 día (regla de empeño)
-
-    interes = capital * (tasa_mensual / 100) * (dias / 30)
-
-    return round(interes, 2)
-
-import csv
-import io
-import os
-import sys
-import smtplib
-import ssl
-import secrets
-from email.mime.text import MIMEText
-from pathlib import Path
-from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
-import threading, time, webbrowser
-from functools import wraps
-from urllib.parse import quote_plus
-# ==============================
-# UI GLOBAL — iPHONE + GLASS MODE
-# ==============================
-
-import os
-import sqlite3
-
-DB_PATH = os.environ.get("DB_PATH", "world_jewelry.db")
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-
 
 GLOBAL_IOS_STYLE = """
 <style>
@@ -4581,6 +4553,7 @@ if __name__ == "__main__":
 
     print(f"=== Iniciando {APP_BRAND} en http://127.0.0.1:5010 ===")
     app.run(debug=False, host="0.0.0.0", port=5010)
+
 
 
 
