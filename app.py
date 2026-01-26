@@ -2,180 +2,60 @@
 # World Jewerly — Sistema modular
 
 from __future__ import annotations
-from flask import Flask, request, redirect, url_for, Response, render_template_string, send_from_directory, session
+
+# =========================
+# IMPORTS BASE
+# =========================
+from flask import (
+    Flask, request, redirect, url_for,
+    Response, render_template_string,
+    send_from_directory, session
+)
+
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timedelta, date
-
-app = Flask(__name__)
-app.secret_key = "world-jewelry"
-
 from pathlib import Path
-from werkzeug.utils import secure_filename
-import uuid
-
-BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_ITEMS = BASE_DIR / "uploads" / "items"
-
-# crear carpeta automáticamente
-UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
-
-
-# =========================
-# SERVIR FOTOS DE ARTÍCULOS
-# =========================
-@app.route("/uploads/items/<filename>")
-def item_photo(filename):
-    return send_from_directory("uploads/items", filename)
-
-
-
-# ======================================================
-# 🔢 INTERÉS AUTOMÁTICO POR RANGO DE FECHAS (MENSUAL)
-# ======================================================
-from datetime import date
-
-def calcular_interes_por_fechas(
-    capital: float,
-    tasa_mensual: float,
-    fecha_desde: date,
-    fecha_hasta: date
-) -> float:
-    """
-    Interés prorrateado por días usando tasa mensual.
-    Ejemplo:
-      10000 al 20% por 3 días:
-      10000 * 0.20 * (3 / 30)
-    """
-
-    if not fecha_desde or not fecha_hasta:
-        return 0.0
-
-    dias = (fecha_hasta - fecha_desde).days
-
-    if dias <= 0:
-        dias = 1  # mínimo 1 día (regla de empeño)
-
-    interes = capital * (tasa_mensual / 100) * (dias / 30)
-
-    return round(interes, 2)
-
-import csv
-import io
-import os
-import sys
-import smtplib
-import ssl
-import secrets
+from functools import wraps
+import os, sys, uuid, csv, io, secrets, threading, time, webbrowser
+import smtplib, ssl
 from email.mime.text import MIMEText
-from pathlib import Path
+from urllib.parse import quote_plus
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-import threading, time, webbrowser
-from functools import wraps
-from urllib.parse import quote_plus
-# ==============================
-# UI GLOBAL — iPHONE + GLASS MODE
-# ==============================
 
+# =========================
+# PATHS + DB (PRIMERO)
+# =========================
+BASE_DIR = Path(__file__).resolve().parent
 
+# 👉 En Render usamos el mismo directorio del proyecto
+DB_PATH = BASE_DIR / "empenos.db"
 
-GLOBAL_IOS_STYLE = """
-<style>
-body {
-  background: linear-gradient(180deg, #0b0b0b, #111);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  font-size: 15px;
-}
+UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_ITEMS = UPLOAD_DIR / "items"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_ITEMS.mkdir(parents=True, exist_ok=True)
 
-.glass {
-  background: rgba(20,20,20,0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-}
-
-button, a.btn, .btn {
-  min-height: 48px;
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.gold-gradient {
-  background: linear-gradient(135deg, #facc15, #f59e0b);
-  color: #000;
-}
-
-input, select, textarea {
-  min-height: 48px;
-  border-radius: 14px;
-  font-size: 16px;
-}
-
-.empeno-ficha {
-  background: rgba(0,0,0,0.35);
-  border-radius: 18px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-
-.ficha-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.ficha-actions a {
-  flex: 1 1 45%;
-  text-align: center;
-  border-radius: 14px;
-  padding: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #facc15;
-  font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  table { display: block; }
-  thead { display: none; }
-  tr {
-    display: block;
-    margin-bottom: 12px;
-    border-radius: 18px;
-    background: rgba(0,0,0,0.35);
-    padding: 10px;
-  }
-  td {
-    display: block;
-    padding: 6px 0;
-  }
-}
-</style>
-"""
-
+# =========================
+# FLASK APP (UNA SOLA VEZ)
+# =========================
+app = Flask(__name__, static_folder="static", static_url_path="/static")
+app.secret_key = "world-jewelry"
+app.config["UPLOAD_FOLDER"] = str(UPLOAD_DIR)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 
 APP_BRAND = "World Jewerly"
 
-# ===== Rutas para .exe / desarrollo =====
-BASE_PATH = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-APPDATA_DIR = Path.home() / "WorldJewerlyData"
-APPDATA_DIR.mkdir(parents=True, exist_ok=True)
+# =========================
+# DATABASE
+# =========================
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-DB_PATH = str(APPDATA_DIR / "empenos.db")
-STATIC_DIR = str(BASE_PATH / "static")
-UPLOAD_DIR = APPDATA_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
-app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 MB
-app.secret_key = "cambia-esta-clave-secreta-por-una-larga-y-unica"  # IMPORTANTE: cámbiala en producción
-
-# ===== Esquema =====
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS loans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -266,46 +146,101 @@ CREATE TABLE IF NOT EXISTS password_resets (
 );
 """
 
-def get_db():
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
+
+def init_db():
+    print("🟢 Inicializando base de datos...")
+    with closing(get_db()) as conn:
+        conn.executescript(SCHEMA)
+        conn.commit()
 
 
+# =========================
+# AUTO INIT DB (RENDER SAFE)
+# =========================
+try:
+    if not DB_PATH.exists():
+        print("🟡 DB no existe, creando...")
+        init_db()
+    else:
+        with closing(get_db()) as conn:
+            conn.execute("SELECT 1 FROM loans LIMIT 1")
+        print("🟢 DB OK, tabla loans existe")
+except Exception as e:
+    print("🔴 Error DB, recreando:", e)
+    init_db()
 
+# =========================
+# SERVIR FOTOS DE ARTÍCULOS
+# =========================
+@app.route("/uploads/items/<filename>")
+def item_photo(filename):
+    return send_from_directory(UPLOAD_ITEMS, filename)
+
+# =========================
+# INTERÉS AUTOMÁTICO
+# =========================
+def calcular_interes_por_fechas(
+    capital: float,
+    tasa_mensual: float,
+    fecha_desde: date,
+    fecha_hasta: date
+) -> float:
+
+    if not fecha_desde or not fecha_hasta:
+        return 0.0
+
+    dias = (fecha_hasta - fecha_desde).days
+    if dias <= 0:
+        dias = 1
+
+    interes = capital * (tasa_mensual / 100) * (dias / 30)
+    return round(interes, 2)
+
+# =========================
+# SETTINGS HELPERS
+# =========================
 def set_setting(key, value):
     with closing(get_db()) as conn:
-        conn.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value)))
+        conn.execute(
+            "INSERT INTO settings(key,value) VALUES(?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value))
+        )
         conn.commit()
-
-def ensure_users_columns():
-    with closing(get_db()) as conn:
-        cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
-
-        if "name" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
-        if "role" not in cols:
-            conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
-
-        conn.commit()
-
 
 
 def get_setting(key, default=None):
     with closing(get_db()) as conn:
-        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
-    return (row["value"] if row else default)
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key=?",
+            (key,)
+        ).fetchone()
+    return row["value"] if row else default
 
-# ===== Email helper =====
-def send_email(to_email:str, subject:str, html_body:str) -> bool:
-    host = get_setting("smtp_host","")
-    port = int(get_setting("smtp_port","587") or 587)
-    user = get_setting("smtp_user","")
-    pwd  = get_setting("smtp_pass","")
+
+def ensure_users_columns():
+    with closing(get_db()) as conn:
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)")]
+        if "name" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
+        if "role" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
+        conn.commit()
+
+# =========================
+# EMAIL HELPER
+# =========================
+def send_email(to_email: str, subject: str, html_body: str) -> bool:
+    host = get_setting("smtp_host", "")
+    port = int(get_setting("smtp_port", "587") or 587)
+    user = get_setting("smtp_user", "")
+    pwd = get_setting("smtp_pass", "")
+
     msg = MIMEText(html_body, "html", "utf-8")
     msg["Subject"] = subject
     msg["From"] = user or "no-reply@localhost"
     msg["To"] = to_email
+
     if host and user and pwd:
         try:
             ctx = ssl.create_default_context()
@@ -316,17 +251,17 @@ def send_email(to_email:str, subject:str, html_body:str) -> bool:
             return True
         except Exception as e:
             print("== ERROR SMTP ==>", e)
-            print("== CONTENIDO DEL CORREO (fallback) ==>\n", html_body)
             return False
     else:
-        # Fallback: imprime en consola
-        print("== SMTP NO CONFIGURADO. MOSTRANDO CORREO EN CONSOLA ==")
+        print("== SMTP NO CONFIGURADO ==")
         print("Para:", to_email)
         print("Asunto:", subject)
         print(html_body)
         return False
 
-# ====== Auth helpers ======
+# =========================
+# AUTH DECORATOR (TEMP)
+# =========================
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -4569,6 +4504,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
