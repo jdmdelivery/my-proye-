@@ -1,6 +1,6 @@
 # app.py
 # World Jewerly — Sistema modular
-
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 # =========================
@@ -645,7 +645,7 @@ BASE_SHELL = """
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-<title>{{ brand }} — {{ title or '' }}</title>
+<title>{{ brand }} - {{ title or '' }}</title>
 
 <!-- ===== PWA ===== -->
 <link rel="manifest" href="/static/manifest.json">
@@ -1044,17 +1044,141 @@ footer{ opacity:.6; font-size:12px; }
       <div class="app-logo">💎</div>
     </div>
 
-    <nav class="nav flex flex-wrap gap-2 justify-center">
-      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">Inicio</a>
-      <a href="{{ url_for('empenos_index') }}" class="{{ 'active' if active=='loans' else '' }}">Empeños</a>
-      <a href="{{ url_for('cash') }}" class="{{ 'active' if active=='cash' else '' }}">Caja</a>
-      <a href="{{ url_for('reports') }}" class="{{ 'active' if active=='reports' else '' }}">Reportes</a>
-      <a href="{{ url_for('inventory') }}" class="{{ 'active' if active=='inventory' else '' }}">Inventario</a>
-      <a href="{{ url_for('sales_page') }}" class="{{ 'active' if active=='sales' else '' }}">Ventas</a>
-      <a href="{{ url_for('users_page') }}" class="{{ 'active' if active=='users' else '' }}">Usuarios</a>
-      <a href="{{ url_for('settings_page') }}" class="{{ 'active' if active=='settings' else '' }}">Config</a>
-      <a href="{{ url_for('logout') }}">Salir</a>
-    </nav>
+   <style>
+/* ================= iOS MENU ================= */
+.menu-ios-wrap{
+  margin-top:18px;
+  padding:0 10px;
+}
+
+.menu-ios{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  padding:18px;
+  border-radius:28px;
+  background:rgba(0,0,0,.28);
+  backdrop-filter:blur(20px);
+  box-shadow:0 30px 60px rgba(0,0,0,.45);
+  transition:.35s ease;
+}
+
+/* ================= MENU ITEM ================= */
+.menu-ios a{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:16px 6px;
+  border-radius:20px;
+  font-weight:700;
+  font-size:14px;
+  color:white;
+  text-decoration:none;
+  background:rgba(255,255,255,.12);
+  transition:.25s;
+  animation:walletIn .5s ease both;
+}
+
+.menu-ios a span{ font-size:13px; }
+
+.menu-ios a.active{
+  background:linear-gradient(135deg,#facc15,#f59e0b);
+  color:#020617;
+}
+
+.menu-ios a:active{
+  transform:scale(.94);
+}
+
+/* ================= WALLET ANIMATION ================= */
+@keyframes walletIn{
+  from{opacity:0; transform:translateY(12px) scale(.96);}
+  to{opacity:1; transform:none;}
+}
+
+/* ================= COLLAPSED MODE ================= */
+.menu-collapsed a span{ display:none; }
+.menu-collapsed a{ padding:18px 0; }
+
+/* ================= FLOAT BUTTON ================= */
+.fab-new{
+  position:fixed;
+  bottom:26px;
+  right:22px;
+  height:64px;
+  width:64px;
+  border-radius:22px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:white;
+  font-size:34px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 20px 40px rgba(0,0,0,.45);
+  z-index:999;
+}
+.fab-new:active{ transform:scale(.92); }
+
+/* ================= TOUCH ================= */
+*{ -webkit-tap-highlight-color:transparent; }
+</style>
+
+<div class="menu-ios-wrap" id="menuWrap">
+  <nav class="menu-ios" id="menuIOS">
+
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">🏠<span>Inicio</span></a>
+    <a href="{{ url_for('empenos_index') }}" class="{{ 'active' if active=='loans' else '' }}">💍<span>Empeños</span></a>
+    <a href="{{ url_for('cash') }}" class="{{ 'active' if active=='cash' else '' }}">💵<span>Caja</span></a>
+
+    <a href="{{ url_for('reports') }}" class="{{ 'active' if active=='reports' else '' }}">📊<span>Reportes</span></a>
+    <a href="{{ url_for('inventory') }}" class="{{ 'active' if active=='inventory' else '' }}">📦<span>Inventario</span></a>
+    <a href="{{ url_for('sales_page') }}" class="{{ 'active' if active=='sales' else '' }}">🧾<span>Ventas</span></a>
+
+    <a href="{{ url_for('users_page') }}" class="{{ 'active' if active=='users' else '' }}">👤<span>Usuarios</span></a>
+    <a href="{{ url_for('settings_page') }}" class="{{ 'active' if active=='settings' else '' }}">⚙️<span>Config</span></a>
+    <a href="{{ url_for('logout') }}">🚪<span>Salir</span></a>
+
+  </nav>
+</div>
+
+<!-- ================= FLOAT BUTTON ================= -->
+<a href="{{ url_for('empenos_index') }}" class="fab-new">＋</a>
+
+<script>
+/* ================= HAPTIC ================= */
+function haptic(strong=false){
+  if(navigator.vibrate){
+    navigator.vibrate(strong?30:15);
+  }
+}
+document.querySelectorAll(".menu-ios a,.fab-new").forEach(el=>{
+  el.addEventListener("click",()=>haptic());
+});
+
+/* ================= SWIPE COLLAPSE ================= */
+let startX=0;
+document.addEventListener("touchstart",e=>startX=e.touches[0].clientX);
+document.addEventListener("touchend",e=>{
+  let diff=e.changedTouches[0].clientX-startX;
+  if(Math.abs(diff)>90){
+    haptic(true);
+    document.getElementById("menuWrap")
+      .classList.toggle("menu-collapsed");
+  }
+});
+
+/* ================= AUTO COLLAPSE MOBILE ================= */
+setTimeout(()=>{
+  if(window.innerWidth<480){
+    document.getElementById("menuWrap")
+      .classList.add("menu-collapsed");
+  }
+},1200);
+</script>
+
   </div>
 </header>
 
@@ -5255,6 +5379,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
