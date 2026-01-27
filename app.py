@@ -913,7 +913,7 @@ def monthly_interest_breakdown(loan_row, from_month:str, to_month:str):
     total = per_month * len(months)
     return rows, total
 
-# ======= DASHBOARD (iPhone / Glass Pro) =======
+# ======= DASHBOARD PREMIUM (Jewelry / Pawn Shop) =======
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -948,79 +948,121 @@ def dashboard():
     cur.close()
     conn.close()
 
-    # ================== VENCIMIENTOS ==================
+    # ================== TARJETAS DE VENCIMIENTO ==================
     fichas = ""
     for r in upcoming:
-        fichas += f"""
-        <div class="ios-due-card" onclick="haptic('tap')">
+        fichas += """
+        <div class="glass-card hover-lift" onclick="haptic('tap')">
           <div class="flex justify-between items-center mb-2">
             <div class="font-extrabold text-yellow-300">
-              #{r['id']} • {r['customer_name']}
+              💎 #{id} • {customer}
             </div>
-            <div class="text-sm opacity-70">
-              {r['due_date']}
+            <div class="text-xs opacity-70">
+              📅 {due}
             </div>
           </div>
-          <div class="text-sm opacity-80">
-            <b>Artículo:</b> {r['item_name']}
+          <div class="text-sm opacity-90">
+            <b>Artículo:</b> {item}
           </div>
-          <div class="text-lg font-extrabold mt-1">
-            ${r['amount']:,.2f}
+          <div class="text-xl font-extrabold mt-2 text-yellow-200">
+            ${amount}
           </div>
         </div>
-        """
+        """.format(
+            id=r["id"],
+            customer=r["customer_name"],
+            due=r["due_date"],
+            item=r["item_name"],
+            amount=f"{r['amount']:,.2f}"
+        )
 
     if not fichas:
         fichas = """
-        <div class="text-center text-yellow-200/70 py-10">
-          ✨ Sin próximos vencimientos
+        <div class="text-center text-yellow-200/70 py-12">
+          ✨ No hay vencimientos próximos
         </div>
         """
 
-    caja_color = "green" if caja >= 0 else "red"
+    caja_color = "emerald" if caja >= 0 else "rose"
 
     # ================== BODY ==================
-    body = f'''
+    body = '''
+<style>
+/* ===== DASHBOARD PREMIUM ===== */
+.gold-gradient{
+  background:linear-gradient(135deg,#facc15,#f59e0b);
+  color:#020617;
+}
+.glass-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));
+  backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 20px 50px rgba(0,0,0,.45);
+}
+.hover-lift{
+  transition:.25s;
+}
+.hover-lift:hover{
+  transform:translateY(-4px) scale(1.01);
+}
+.metric{
+  position:relative;
+  overflow:hidden;
+}
+.metric::after{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:radial-gradient(circle at top left,rgba(255,255,255,.25),transparent 60%);
+}
+.metric-value{
+  font-size:2.2rem;
+  font-weight:900;
+}
+.badge-green{color:#34d399}
+.badge-emerald{color:#10b981}
+.badge-rose{color:#fb7185}
+</style>
+
 <div class="space-y-10">
 
   <!-- BOTÓN FACTURACIÓN -->
   <div class="flex justify-end">
     <a href="{{{{ url_for('facturacion') }}}}"
        onclick="haptic('nav')"
-       class="gold-gradient px-6 py-3 rounded-2xl text-lg font-extrabold shadow-xl">
+       class="gold-gradient px-6 py-3 rounded-2xl font-extrabold shadow-xl">
        🧾 Facturación
     </a>
   </div>
 
-  <!-- MÉTRICAS iOS -->
+  <!-- MÉTRICAS PRINCIPALES -->
   <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <div class="ios-card" onclick="haptic('tap')">
-      <div class="ios-glow music-wave gold"></div>
-      <div class="ios-label">Empeños activos</div>
-      <div class="ios-value" data-count="{activos}">0</div>
+    <div class="glass-card metric" onclick="haptic('tap')">
+      <div class="text-sm opacity-80">Empeños activos</div>
+      <div class="metric-value badge-green" data-count="{activos}">0</div>
     </div>
 
-    <div class="ios-card green" onclick="haptic('tap')">
-      <div class="ios-glow music-wave green"></div>
-      <div class="ios-label">Capital activo</div>
-      <div class="ios-value" data-count="{capital_prestado:.2f}">0</div>
+    <div class="glass-card metric" onclick="haptic('tap')">
+      <div class="text-sm opacity-80">Capital en custodia</div>
+      <div class="metric-value badge-emerald" data-count="{capital}">0</div>
     </div>
 
-    <div class="ios-card {caja_color}" onclick="haptic('tap')">
-      <div class="ios-glow music-wave {caja_color}"></div>
-      <div class="ios-label">Caja de hoy</div>
-      <div class="ios-value" data-count="{caja:.2f}">0</div>
+    <div class="glass-card metric" onclick="haptic('tap')">
+      <div class="text-sm opacity-80">Caja del día</div>
+      <div class="metric-value badge-{caja_color}" data-count="{caja}">0</div>
     </div>
 
   </section>
 
   <!-- VENCIMIENTOS -->
-  <section class="glass rounded-3xl p-6">
-    <h2 class="text-xl font-extrabold text-yellow-300 mb-4">
+  <section class="glass-card">
+    <h2 class="text-xl font-extrabold text-yellow-300 mb-5">
       ⏰ Vencimientos próximos (7 días)
     </h2>
-    <div class="space-y-4">
+    <div class="grid gap-4">
       {fichas}
     </div>
   </section>
@@ -1028,34 +1070,36 @@ def dashboard():
 </div>
 
 <script>
-/* ===== COUNT UP iOS ===== */
+/* ===== ANIMACIÓN DE NÚMEROS ===== */
 document.querySelectorAll('[data-count]').forEach(el=>{
   const target = parseFloat(el.dataset.count);
   let val = 0;
-  const step = target / 40;
+  const step = target / 35;
 
   function animate(){
     val += step;
     if(val >= target) val = target;
     el.textContent = Number.isInteger(target)
       ? Math.round(val)
-      : '$' + val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      : '$' + val.toLocaleString(undefined,{
+          minimumFractionDigits:2,
+          maximumFractionDigits:2
+        });
     if(val < target) requestAnimationFrame(animate);
   }
   animate();
 });
-
-/* ===== APPLE MUSIC WAVES ===== */
-document.querySelectorAll('.music-wave').forEach(w=>{
-  let x=0;
-  setInterval(()=>{
-    x=(x+1)%100;
-    w.style.transform = `translate(${x}px, ${-x/2}px)`;
-  },60);
-});
 </script>
-'''
+'''.format(
+        activos=activos,
+        capital=f"{capital_prestado:,.2f}",
+        caja=f"{caja:,.2f}",
+        caja_color=caja_color,
+        fichas=fichas
+    )
+
     return render_page(body, title="Dashboard", active="dashboard")
+
 
 @app.route("/clientes/nuevo", methods=["POST"])
 @login_required
@@ -4670,6 +4714,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
