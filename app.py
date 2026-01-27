@@ -1745,73 +1745,56 @@ EDIT_TPL = """
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Artículo</label>
-      <input name="item_name" value="{{ row.item_name }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="item_name" value="{{ row.item_name }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Peso (gramos)</label>
-      <input name="weight_grams" type="number" step="0.01"
-             value="{{ row.weight_grams }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="weight_grams" type="number" step="0.01" value="{{ row.weight_grams }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Cliente</label>
-      <input name="customer_name" value="{{ row.customer_name }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="customer_name" value="{{ row.customer_name }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">ID Cliente</label>
-      <input name="customer_id" value="{{ row.customer_id }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="customer_id" value="{{ row.customer_id }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Teléfono</label>
-      <input name="phone" value="{{ row.phone }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="phone" value="{{ row.phone }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Monto</label>
-      <input name="amount" type="number" step="0.01"
-             value="{{ row.amount }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="amount" type="number" step="0.01" value="{{ row.amount }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Interés (%) mensual</label>
-      <input name="interest_rate" type="number" step="0.01"
-             value="{{ row.interest_rate }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="interest_rate" type="number" step="0.01" value="{{ row.interest_rate }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Fecha de vencimiento</label>
-      <input name="due_date" type="date"
-             value="{{ row.due_date }}"
-             class="w-full rounded-xl border bg-black/40 p-2"/>
+      <input name="due_date" type="date" value="{{ row.due_date }}" class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Foto del artículo</label>
 
       {% if row.photo_path %}
-        <img src="{{ row.photo_path }}"
-             alt="Foto del artículo"
-             class="h-28 w-28 object-cover rounded-xl ring-2 ring-amber-300 mb-2"/>
+        <img src="{{ row.photo_path }}" class="h-28 w-28 object-cover rounded-xl ring-2 ring-amber-300 mb-2"/>
       {% else %}
-        <div class="h-28 w-28 flex items-center justify-center
-                    rounded-xl border border-amber-300/40
-                    bg-black/30 text-stone-400 text-xs mb-2">
+        <div class="h-28 w-28 flex items-center justify-center rounded-xl border border-amber-300/40 bg-black/30 text-stone-400 text-xs mb-2">
           Sin foto
         </div>
       {% endif %}
 
-      <input type="file" name="photo" accept="image/*"
-             class="w-full text-sm rounded-xl border bg-black/40 p-2"/>
+      <input type="file" name="photo" accept="image/*" class="w-full text-sm rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-actions pt-4 flex gap-3">
@@ -1819,8 +1802,7 @@ EDIT_TPL = """
         Guardar cambios
       </button>
 
-      <a href="{{ url_for('empenos_index') }}"
-         class="px-6 py-2 rounded-xl border">
+      <a href="{{ url_for('empenos_index') }}" class="px-6 py-2 rounded-xl border">
         Cancelar
       </a>
     </div>
@@ -4734,6 +4716,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
