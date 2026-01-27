@@ -1397,24 +1397,23 @@ def empenos_index():
     where_sql = "WHERE " + " AND ".join(where) if where else ""
 
     # ================== SQL PRINCIPAL ==================
-sql = """
-    SELECT
-        l.id,
-        l.created_at,
-        l.item_name,
-        l.weight_grams,
-        l.amount,
-        l.interest_rate,
-        l.status,
-        l.due_date,
-        l.customer_name,
-        l.phone
-    FROM loans l
-    {where}
-    ORDER BY l.id DESC
-    LIMIT 500
+    sql = """
+SELECT
+    l.id,
+    l.created_at,
+    l.item_name,
+    l.weight_grams,
+    l.amount,
+    l.interest_rate,
+    l.status,
+    l.due_date,
+    l.customer_name,
+    l.phone
+FROM loans l
+{where}
+ORDER BY l.id DESC
+LIMIT 500
 """.format(where=where_sql)
-)
 
     # ================== EJECUCIÓN ==================
     with closing(get_db()) as conn:
@@ -1445,6 +1444,7 @@ sql = """
     )
 
     return render_page(body, title="Empeños", active="loans")
+
 
 
 from datetime import datetime, date
@@ -4723,6 +4723,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
