@@ -986,44 +986,44 @@ def dashboard():
     caja_color = "emerald" if caja >= 0 else "rose"
 
     # ================== BODY ==================
-    body = '''
+body = f"""
 <style>
 /* ===== DASHBOARD PREMIUM ===== */
-.gold-gradient{
+.gold-gradient {{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   color:#020617;
-}
-.glass-card{
+}}
+.glass-card {{
   background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));
   backdrop-filter:blur(18px);
   border:1px solid rgba(255,255,255,.18);
   border-radius:22px;
   padding:18px;
   box-shadow:0 20px 50px rgba(0,0,0,.45);
-}
-.hover-lift{
+}}
+.hover-lift {{
   transition:.25s;
-}
-.hover-lift:hover{
+}}
+.hover-lift:hover {{
   transform:translateY(-4px) scale(1.01);
-}
-.metric{
+}}
+.metric {{
   position:relative;
   overflow:hidden;
-}
-.metric::after{
+}}
+.metric::after {{
   content:"";
   position:absolute;
   inset:-40%;
   background:radial-gradient(circle at top left,rgba(255,255,255,.25),transparent 60%);
-}
-.metric-value{
+}}
+.metric-value {{
   font-size:2.2rem;
   font-weight:900;
-}
-.badge-green{color:#34d399}
-.badge-emerald{color:#10b981}
-.badge-rose{color:#fb7185}
+}}
+.badge-green{{ color:#34d399 }}
+.badge-emerald{{ color:#10b981 }}
+.badge-rose{{ color:#fb7185 }}
 </style>
 
 <div class="space-y-10">
@@ -1071,32 +1071,27 @@ def dashboard():
 
 <script>
 /* ===== ANIMACIÓN DE NÚMEROS ===== */
-document.querySelectorAll('[data-count]').forEach(el=>{
+document.querySelectorAll('[data-count]').forEach(el => {{
   const target = parseFloat(el.dataset.count);
   let val = 0;
   const step = target / 35;
 
-  function animate(){
+  function animate() {{
     val += step;
-    if(val >= target) val = target;
+    if (val >= target) val = target;
     el.textContent = Number.isInteger(target)
       ? Math.round(val)
-      : '$' + val.toLocaleString(undefined,{
+      : '$' + val.toLocaleString(undefined, {{
           minimumFractionDigits:2,
           maximumFractionDigits:2
-        });
-    if(val < target) requestAnimationFrame(animate);
-  }
+        }});
+    if (val < target) requestAnimationFrame(animate);
+  }}
   animate();
-});
+}});
 </script>
-'''.format(
-        activos=activos,
-        capital=f"{capital_prestado:,.2f}",
-        caja=f"{caja:,.2f}",
-        caja_color=caja_color,
-        fichas=fichas
-    )
+"""
+
 
     return render_page(body, title="Dashboard", active="dashboard")
 
@@ -4660,6 +4655,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
