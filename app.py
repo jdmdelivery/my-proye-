@@ -639,7 +639,6 @@ def reset():
 
 # ====== PLANTILLA BASE ======
 
-BASE_SHELL = """
 <!doctype html>
 <html lang="es">
 <head>
@@ -683,10 +682,10 @@ header{
   box-shadow:0 20px 40px rgba(0,0,0,.45);
 }
 .app-logo{
-  height:56px;width:56px;border-radius:18px;
+  height:52px;width:52px;border-radius:16px;
   background:#020617;
   display:flex;align-items:center;justify-content:center;
-  font-size:28px;
+  font-size:26px;
 }
 
 /* ===== MENU GLASS ===== */
@@ -701,8 +700,8 @@ header{
 
 .menu-panel{
   position:absolute;
-  top:20px;right:16px;
-  width:min(90%,360px);
+  top:20px;left:16px;
+  width:min(90%,340px);
   background:linear-gradient(180deg,rgba(30,41,59,.95),rgba(2,6,23,.95));
   border-radius:28px;
   padding:16px;
@@ -727,19 +726,21 @@ header{
 
 <body>
 
-<header class="px-4 py-6">
+<header class="px-4 py-5">
   <div class="flex items-center justify-between">
-    <div class="app-logo">💎</div>
 
-    <h1 class="text-3xl font-extrabold text-black text-center flex-1">
-      {{ brand }}
-    </h1>
-
-    <!-- BOTÓN ÚNICO -->
+    <!-- ☰ IZQUIERDA -->
     <button id="menuBtn"
       class="w-12 h-12 rounded-2xl bg-black/80 text-white text-2xl font-black flex items-center justify-center">
       ☰
     </button>
+
+    <h1 class="text-2xl font-extrabold text-black text-center flex-1">
+      {{ brand }}
+    </h1>
+
+    <!-- LOGO DERECHA -->
+    <div class="app-logo">💎</div>
   </div>
 </header>
 
@@ -771,7 +772,7 @@ function haptic(type="tap"){
   if(!navigator.vibrate) return;
   const patterns={
     tap:[15],
-    open:[20],
+    open:[25],
     nav:[10],
     success:[20,40,20],
     danger:[60,20,60],
@@ -805,7 +806,7 @@ document.querySelectorAll(".menu-item").forEach(el=>{
 
 </body>
 </html>
-"""
+
 
 
 
@@ -916,7 +917,7 @@ def dashboard():
 
     # ================== MÉTRICAS ==================
     cur.execute("SELECT COUNT(*) FROM loans WHERE status='ACTIVO'")
-    activos = cur.fetchone()[0]
+    activos = cur.fetchone()[0] or 0
 
     cur.execute("SELECT SUM(amount) FROM loans WHERE status='ACTIVO'")
     capital_prestado = cur.fetchone()[0] or 0
@@ -926,7 +927,7 @@ def dashboard():
         FROM cash_movements
         WHERE DATE(when_at) = DATE('now')
     """)
-    caja = cur.fetchone()["neto"]
+    caja = cur.fetchone()["neto"] or 0
 
     # ================== PRÓXIMOS VENCIMIENTOS ==================
     cur.execute("""
@@ -941,68 +942,86 @@ def dashboard():
     cur.close()
     conn.close()
 
-    # ================== FICHAS ==================
+    # ================== FICHAS VENCIMIENTOS ==================
     fichas = ""
     for r in upcoming:
         fichas += f"""
-        <div class="empeno-ficha">
-          <div class="ficha-header">
-            <span># {r['id']}</span>
-            <span>{r['due_date']}</span>
+        <div class="ios-due-card" onclick="haptic('tap')">
+          <div class="flex justify-between items-center mb-2">
+            <div class="font-extrabold text-yellow-300">
+              #{r['id']} • {r['customer_name']}
+            </div>
+            <div class="text-sm opacity-70">
+              {r['due_date']}
+            </div>
           </div>
-          <div><b>Cliente:</b> {r['customer_name']}</div>
-          <div><b>Artículo:</b> {r['item_name']}</div>
-          <div><b>Monto:</b> ${r['amount']:.2f}</div>
+          <div class="text-sm opacity-80">
+            <b>Artículo:</b> {r['item_name']}
+          </div>
+          <div class="text-lg font-extrabold mt-1">
+            ${r['amount']:,.2f}
+          </div>
         </div>
         """
 
     if not fichas:
         fichas = """
         <div class="text-center text-yellow-200/70 py-10">
-          Sin próximos vencimientos
+          ✨ Sin próximos vencimientos
         </div>
         """
 
     # ================== BODY ==================
     body = f"""
-<div class="space-y-6">
+<div class="space-y-10">
 
+  <!-- ===== BOTÓN FACTURACIÓN ===== -->
   <div class="flex justify-end">
     <a href="{url_for('facturacion')}"
+       onclick="haptic('nav')"
        class="gold-gradient px-6 py-3 rounded-2xl text-lg font-extrabold shadow-xl">
-       Facturación
+       🧾 Facturación
     </a>
   </div>
 
-  <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="glass rounded-3xl p-6">
-      <div class="text-xs text-yellow-200/70">Empeños activos</div>
-      <div class="text-4xl font-extrabold mt-2">{activos}</div>
+  <!-- ===== MÉTRICAS iOS ===== -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- Empeños activos -->
+    <div class="ios-card" onclick="haptic('tap')">
+      <div class="ios-glow"></div>
+      <div class="ios-label">Empeños activos</div>
+      <div class="ios-value">{activos}</div>
     </div>
 
-    <div class="glass rounded-3xl p-6">
-      <div class="text-xs text-yellow-200/70">Capital activo</div>
-      <div class="text-4xl font-extrabold mt-2">
-        ${capital_prestado:,.2f}
-      </div>
+    <!-- Capital activo -->
+    <div class="ios-card green" onclick="haptic('tap')">
+      <div class="ios-glow"></div>
+      <div class="ios-label">Capital activo</div>
+      <div class="ios-value">${capital_prestado:,.2f}</div>
     </div>
 
-    <div class="glass rounded-3xl p-6">
-      <div class="text-xs text-yellow-200/70">Caja de hoy</div>
-      <div class="text-4xl font-extrabold mt-2">
-        ${caja:,.2f}
-      </div>
+    <!-- Caja de hoy -->
+    <div class="ios-card blue" onclick="haptic('tap')">
+      <div class="ios-glow"></div>
+      <div class="ios-label">Caja de hoy</div>
+      <div class="ios-value">${caja:,.2f}</div>
     </div>
+
   </section>
 
+  <!-- ===== VENCIMIENTOS ===== -->
   <section class="glass rounded-3xl p-6">
-    <h2 class="text-xl font-bold text-yellow-300 mb-4">
-      Vencimientos próximos (7 días)
+    <h2 class="text-xl font-extrabold text-yellow-300 mb-4">
+      ⏰ Vencimientos próximos (7 días)
     </h2>
     <div class="space-y-4">
       {fichas}
     </div>
   </section>
+
+</div>
+"""
 
   <!-- RESET SISTEMA -->
   <div class="glass rounded-2xl p-4 mt-6 border border-red-500/30">
@@ -1187,6 +1206,7 @@ body {
   font-size: 15px;
 }
 
+/* ===== GLASS BASE ===== */
 .glass {
   background: rgba(20,20,20,0.55);
   backdrop-filter: blur(14px);
@@ -1195,6 +1215,7 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
 
+/* ===== BOTONES ===== */
 button, a.btn, .btn {
   min-height: 48px;
   padding: 12px 18px;
@@ -1213,12 +1234,7 @@ button, a.btn, .btn {
   border: none;
 }
 
-input, select, textarea {
-  min-height: 48px;
-  border-radius: 14px;
-  font-size: 16px;
-}
-
+/* ===== FICHAS ===== */
 .empeno-ficha {
   background: rgba(0,0,0,0.35);
   border-radius: 18px;
@@ -1226,48 +1242,59 @@ input, select, textarea {
   margin-bottom: 12px;
 }
 
-.ficha-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
+/* =================================================
+   DASHBOARD iOS CARDS (AQUÍ VA TU BLOQUE)
+================================================= */
+.ios-card{
+  position:relative;
+  padding:26px;
+  border-radius:28px;
+  background:linear-gradient(135deg,#020617,#020617);
+  overflow:hidden;
+  border:1px solid rgba(250,204,21,.28);
+  box-shadow:0 30px 80px rgba(0,0,0,.65);
 }
 
-.ficha-actions a {
-  flex: 1 1 45%;
-  text-align: center;
-  border-radius: 14px;
-  padding: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #facc15;
-  font-weight: 700;
+.ios-card.green{border-color:rgba(34,197,94,.45)}
+.ios-card.blue{border-color:rgba(56,189,248,.45)}
+
+.ios-label{
+  font-size:14px;
+  opacity:.7;
+  margin-bottom:6px;
+  font-weight:600;
 }
 
-@media (max-width: 768px) {
-  table { display: block; }
-  thead { display: none; }
-  tr {
-    display: block;
-    margin-bottom: 12px;
-    border-radius: 18px;
-    background: rgba(0,0,0,0.35);
-    padding: 10px;
-  }
-  td {
-    display: block;
-    padding: 6px 0;
-  }
+.ios-value{
+  font-size:44px;
+  font-weight:900;
+  letter-spacing:-1px;
 }
 
-a, button {
-  touch-action: manipulation;
+/* ===== GLOW ===== */
+.ios-glow{
+  position:absolute;
+  inset:-40%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(250,204,21,.28), transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(34,197,94,.18), transparent 45%);
+  animation:glowMove 9s linear infinite;
+}
+
+.ios-card.green .ios-glow{
+  background:radial-gradient(circle at 30% 30%, rgba(34,197,94,.35), transparent 45%);
+}
+
+.ios-card.blue .ios-glow{
+  background:radial-gradient(circle at 30% 30%, rgba(56,189,248,.35), transparent 45%);
+}
+
+@keyframes glowMove{
+  0%{transform:translate(0,0)}
+  50%{transform:translate(22px,-22px)}
+  100%{transform:translate(0,0)}
 }
 </style>
-
-<!-- ==============================
-     /iPHONE + GLASS + PWA
-================================ -->
-"""
 
 
 
