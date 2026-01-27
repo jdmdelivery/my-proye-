@@ -1543,7 +1543,12 @@ return render_page(body, title=f"Empeño #{loan_id}", active="loans")
 
 @app.route("/empenos/nuevo", methods=["GET", "POST"])
 @login_required
-def nuevo_empeno_page():
+def empenos_nuevo():
+
+    from datetime import datetime, timedelta, date
+    from contextlib import closing
+    from werkzeug.utils import secure_filename
+    import time
 
     # =========================
     # POST → GUARDAR EMPEÑO
@@ -1603,64 +1608,120 @@ def nuevo_empeno_page():
             photo_path = "/uploads/" + fname
 
         # ===== GUARDAR EN BD =====
-with closing(get_db()) as conn:
+        with closing(get_db()) as conn:
 
-    sql_loan = (
-        "INSERT INTO loans ("
-        "created_at, "
-        "item_name, "
-        "weight_grams, "
-        "customer_name, "
-        "customer_id, "
-        "phone, "
-        "amount, "
-        "interest_rate, "
-        "due_date, "
-        "photo_path"
-        ") VALUES (?,?,?,?,?,?,?,?,?,?)"
+            conn.execute("""
+                INSERT INTO loans (
+                    created_at,
+                    item_name,
+                    weight_grams,
+                    customer_name,
+                    customer_id,
+                    phone,
+                    amount,
+                    interest_rate,
+                    due_date,
+                    photo_path
+                )
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, (
+                created_at,
+                item_name,
+                weight_grams,
+                customer_name,
+                customer_id,
+                phone,
+                amount,
+                interest_rate,
+                due_date,
+                photo_path
+            ))
+
+            conn.execute("""
+                INSERT INTO cash_movements (
+                    when_at,
+                    concept,
+                    amount,
+                    ref
+                )
+                VALUES (?,?,?,?)
+            """, (
+                created_at,
+                f"Desembolso empeño {customer_name}",
+                -amount,
+                "LOAN"
+            ))
+
+            conn.commit()
+
+        return redirect(url_for("empenos_index"))
+
+    # =========================
+    # GET → FORMULARIO
+    # =========================
+    today = date.today().isoformat()
+    default_rate = float(get_setting("default_interest_rate", "20"))
+
+    body = '''
+    <div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
+      <h2 class="text-xl font-bold text-yellow-300 mb-4">
+        Nuevo Empeño
+      </h2>
+
+      <form method="post" enctype="multipart/form-data" class="space-y-4">
+
+        <input name="customer_name" placeholder="Nombre del cliente" required
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="customer_id" placeholder="ID del cliente" required
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="phone" placeholder="Teléfono" required
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="item_name" placeholder="Artículo" required
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="weight_grams" type="number" step="0.01"
+          placeholder="Peso (g)"
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="amount" type="number" step="0.01" required
+          placeholder="Monto entregado"
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="interest_rate" type="number" step="0.01"
+          value="{rate}"
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="start_date" type="date" value="{today}"
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <input name="photo" type="file" accept="image/*"
+          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+        <div class="flex gap-2 pt-4">
+          <button class="gold-gradient px-6 py-3 rounded-xl font-extrabold">
+            Guardar empeño
+          </button>
+          <a href="/empenos"
+             class="px-6 py-3 rounded-xl border border-yellow-200/30">
+            Cancelar
+          </a>
+        </div>
+
+      </form>
+    </div>
+    '''.format(
+        today=today,
+        rate=f"{default_rate:.2f}"
     )
 
-    conn.execute(
-        sql_loan,
-        (
-            created_at,
-            item_name,
-            weight_grams,
-            customer_name,
-            customer_id,
-            phone,
-            amount,
-            interest_rate,
-            due_date,
-            photo_path
-        )
-    )
-
-    sql_cash = (
-        "INSERT INTO cash_movements ("
-        "when_at, "
-        "concept, "
-        "amount, "
-        "ref"
-        ") VALUES (?,?,?,?)"
-    )
-
-    conn.execute(
-        sql_cash,
-        (
-            created_at,
-            f"Desembolso empeño {customer_name}",
-            -amount,
-            "LOAN"
-        )
-    )
-
-    conn.commit()
-
-return redirect(url_for("empenos_index"))
+    return render_page(body, title="Nuevo empeño", active="loans")
 
 
-   # =========================
+
+# =========================
 # GET → FORMULARIO
 # =========================
 today = date.today().isoformat()
@@ -4716,6 +4777,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
