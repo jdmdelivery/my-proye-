@@ -987,33 +987,6 @@ def empeno_delete_api(loan_id: int):
 # =========================
 # EJEMPLO: EMPENOS INDEX (USA EL WALLET TPL)
 # =========================
-@app.route("/empenos")
-@login_required
-def empenos_index():
-    from contextlib import closing
-
-    q = (request.args.get("q") or "").strip()
-    sql = "SELECT * FROM loans"
-    params = []
-
-    if q:
-        sql += " WHERE customer_name LIKE ? OR phone LIKE ? OR item_name LIKE ? OR customer_id LIKE ?"
-        like = f"%{q}%"
-        params = [like, like, like, like]
-
-    sql += " ORDER BY id DESC"
-
-    with closing(get_db()) as conn:
-        rows = conn.execute(sql, params).fetchall()
-
-    # currency opcional
-    currency = "USD"
-
-    body = render_template_string(EMPENOS_WALLET_TPL, rows=rows, q=q, currency=currency)
-    return render_page(body, title="Empeños", active="loans")
-
-
-
 
 def render_page(body_html, title="", active=""):
     now = datetime.now()
@@ -4822,6 +4795,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
