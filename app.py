@@ -1732,7 +1732,7 @@ body = '''
 return render_page(body, title="Nuevo empeño", active="loans")
 
 
-# ====== Editar, ticket ======
+# ====== Editar Empeño ======
 EDIT_TPL = """
 <div class="max-w-2xl mx-auto glass p-6 rounded-2xl">
 
@@ -1741,60 +1741,58 @@ EDIT_TPL = """
     <div>{{ row.created_at[:10] }}</div>
   </div>
 
-  <form method="post"
-        enctype="multipart/form-data"
-        class="space-y-4">
+  <form method="post" enctype="multipart/form-data" class="space-y-4">
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Artículo</label>
       <input name="item_name" value="{{ row.item_name }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Peso (gramos)</label>
       <input name="weight_grams" type="number" step="0.01"
              value="{{ row.weight_grams }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Cliente</label>
       <input name="customer_name" value="{{ row.customer_name }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">ID Cliente</label>
       <input name="customer_id" value="{{ row.customer_id }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Teléfono</label>
       <input name="phone" value="{{ row.phone }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Monto</label>
       <input name="amount" type="number" step="0.01"
              value="{{ row.amount }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Interés (%) mensual</label>
       <input name="interest_rate" type="number" step="0.01"
              value="{{ row.interest_rate }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <div class="ficha-line">
       <label class="block text-sm mb-1">Fecha de vencimiento</label>
       <input name="due_date" type="date"
              value="{{ row.due_date }}"
-        class="w-full rounded-xl border bg-black/40 p-2"/>
+             class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
     <!-- 📸 FOTO DEL ARTÍCULO -->
@@ -1804,8 +1802,7 @@ EDIT_TPL = """
       {% if row.photo_path %}
         <img src="{{ row.photo_path }}"
              alt="Foto del artículo"
-             class="h-28 w-28 object-cover rounded-xl
-                    ring-2 ring-amber-300 mb-2"/>
+             class="h-28 w-28 object-cover rounded-xl ring-2 ring-amber-300 mb-2"/>
       {% else %}
         <div class="h-28 w-28 flex items-center justify-center
                     rounded-xl border border-amber-300/40
@@ -1814,9 +1811,7 @@ EDIT_TPL = """
         </div>
       {% endif %}
 
-      <input type="file"
-             name="photo"
-             accept="image/*"
+      <input type="file" name="photo" accept="image/*"
              class="w-full text-sm rounded-xl border bg-black/40 p-2"/>
     </div>
 
@@ -1825,7 +1820,7 @@ EDIT_TPL = """
         Guardar cambios
       </button>
 
-      <a href="{{ url_for('index') }}"
+      <a href="{{ url_for('empenos_index') }}"
          class="px-6 py-2 rounded-xl border">
         Cancelar
       </a>
@@ -1834,12 +1829,11 @@ EDIT_TPL = """
   </form>
 </div>
 """
-
-
+# ====== Detalle / Ticket Empeño ======
 DETAIL_TPL = """
-<div class="max-w-3xl mx-auto empeno-ficha">
+<div class="max-w-3xl mx-auto empeno-ficha glass p-6 rounded-2xl">
 
-  <div class="ficha-header">
+  <div class="ficha-header flex justify-between mb-4">
     <div>Empeño #{{ row.id }}</div>
     <div>{{ row.created_at[:10] }}</div>
   </div>
@@ -1855,14 +1849,15 @@ DETAIL_TPL = """
     <div>
       <div class="ficha-line"><b>Artículo:</b> {{ row.item_name }}</div>
       <div class="ficha-line"><b>Peso:</b> {{ "%.2f"|format(row.weight_grams) }} g</div>
-      <div class="ficha-line"><b>Estado:</b>
+      <div class="ficha-line">
+        <b>Estado:</b>
         <span class="estado {{ row.status|lower }}">{{ row.status }}</span>
       </div>
     </div>
 
   </div>
 
-  <div class="my-3 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent"></div>
+  <div class="my-4 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent"></div>
 
   <div class="grid md:grid-cols-2 gap-4 text-sm">
 
@@ -1883,15 +1878,16 @@ DETAIL_TPL = """
   {% if row.photo_path %}
   <div class="mt-4">
     <b>Foto del artículo:</b><br>
-    <img src="{{ row.photo_path }}" class="mt-2 h-48 rounded-xl ring-2 ring-amber-300">
+    <img src="{{ row.photo_path }}"
+         class="mt-2 h-48 rounded-xl ring-2 ring-amber-300"/>
   </div>
   {% endif %}
 
-  <div class="ficha-actions mt-4">
+  <div class="ficha-actions mt-6 flex flex-wrap gap-3">
     <a href="{{ url_for('ticket', loan_id=row.id) }}">🧾 Recibo</a>
     <a href="{{ url_for('edit_loan_page', loan_id=row.id) }}">✏️ Editar</a>
     <a href="{{ url_for('payment_page', loan_id=row.id) }}">💰 Pago</a>
-    <a href="{{ url_for('index') }}">⬅ Volver</a>
+    <a href="{{ url_for('empenos_index') }}">⬅ Volver</a>
   </div>
 
 </div>
@@ -4743,6 +4739,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
