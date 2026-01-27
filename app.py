@@ -632,7 +632,7 @@ BASE_SHELL = """
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* ================= DATE PICKER FIX (iPhone / Android) ================= */
+/* ================= DATE PICKER FIX ================= */
 input[type="date"]{
   background-color: rgba(255,255,255,0.95) !important;
   color: #111827 !important;
@@ -641,20 +641,18 @@ input[type="date"]{
   font-weight: 600;
 }
 input[type="date"]::-webkit-calendar-picker-indicator{
-  filter: invert(0);
-  cursor: pointer;
+  cursor:pointer;
 }
 input[type="date"]:focus{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(250,204,21,.35);
+  outline:none;
+  box-shadow:0 0 0 3px rgba(250,204,21,.35);
 }
 
-/* ===================== iPHONE BANK APP ===================== */
+/* ================= iPHONE GLASS ================= */
 :root{
   --gold:#facc15;
   --gold-dark:#d97706;
   --bg:#020617;
-  --glass:rgba(255,255,255,.08);
 }
 
 html,body{
@@ -666,14 +664,15 @@ html,body{
   -webkit-font-smoothing:antialiased;
 }
 
-/* ===================== HEADER ===================== */
+/* ================= HEADER ================= */
 header{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   box-shadow:0 20px 40px rgba(0,0,0,.45);
 }
 
 .app-logo{
-  height:56px;width:56px;
+  height:56px;
+  width:56px;
   border-radius:18px;
   background:#020617;
   display:flex;
@@ -683,7 +682,7 @@ header{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
 }
 
-/* ===================== NAV ===================== */
+/* ================= NAV ================= */
 .nav a{
   padding:10px 16px;
   border-radius:16px;
@@ -697,7 +696,7 @@ header{
   color:#fff;
 }
 
-/* ===================== GLASS ===================== */
+/* ================= GLASS ================= */
 .glass{
   background:linear-gradient(
     180deg,
@@ -712,7 +711,7 @@ header{
     0 30px 60px rgba(0,0,0,.55);
 }
 
-/* ===================== BUTTONS ===================== */
+/* ================= BUTTONS ================= */
 button,.btn{
   border-radius:18px;
   padding:14px 18px;
@@ -727,7 +726,7 @@ button:active{ transform:scale(.97); }
   box-shadow:0 12px 25px rgba(250,204,21,.45);
 }
 
-/* ===================== TABLE ===================== */
+/* ================= TABLE ================= */
 table{
   border-collapse:separate;
   border-spacing:0 12px;
@@ -741,7 +740,7 @@ tbody tr{
   border-radius:18px;
 }
 
-/* ===================== EMPENO CARD ===================== */
+/* ================= CARDS ================= */
 .empeno-ficha{
   background:linear-gradient(135deg,#020617,#020617cc);
   border-radius:20px;
@@ -750,7 +749,7 @@ tbody tr{
   box-shadow:0 20px 40px rgba(0,0,0,.6);
 }
 
-/* ===================== TOUCH ===================== */
+/* ================= TOUCH ================= */
 *{ -webkit-tap-highlight-color:transparent; }
 
 footer{
@@ -762,20 +761,57 @@ footer{
 
 <body>
 
-<div class="flex items-center justify-between w-full max-w-3xl">
-  
-  <!-- Diamante izquierdo -->
-  <div class="app-logo">💎</div>
+<header>
+  <div class="max-w-7xl mx-auto px-4 py-6">
 
-  <!-- Título centrado -->
-  <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight text-center flex-1">
-    {{ brand }}
-  </h1>
+    <!-- LOGO + TITULO -->
+    <div class="flex items-center justify-between gap-4 mb-4">
 
-  <!-- Diamante derecho -->
-  <div class="app-logo">💎</div>
+      <div class="app-logo">💎</div>
 
-</div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight text-center flex-1">
+        {{ brand }}
+      </h1>
+
+      <div class="app-logo">💎</div>
+
+    </div>
+
+    <!-- NAV -->
+    <nav class="nav flex flex-wrap gap-2 justify-center">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">Inicio</a>
+      <a href="{{ url_for('empenos_index') }}" class="{{ 'active' if active=='loans' else '' }}">Empeños</a>
+      <a href="{{ url_for('cash') }}" class="{{ 'active' if active=='cash' else '' }}">Caja</a>
+      <a href="{{ url_for('reports') }}" class="{{ 'active' if active=='reports' else '' }}">Reportes</a>
+      <a href="{{ url_for('inventory') }}" class="{{ 'active' if active=='inventory' else '' }}">Inventario</a>
+      <a href="{{ url_for('sales_page') }}" class="{{ 'active' if active=='sales' else '' }}">Ventas</a>
+      <a href="{{ url_for('users_page') }}" class="{{ 'active' if active=='users' else '' }}">Usuarios</a>
+      <a href="{{ url_for('settings_page') }}" class="{{ 'active' if active=='settings' else '' }}">Config</a>
+      <a href="{{ url_for('logout') }}">Salir</a>
+    </nav>
+
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+  {{ body|safe }}
+</main>
+
+<footer class="text-center py-6">
+  © {{ now.year if now else '' }} {{ brand }}
+</footer>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/static/sw.js")
+    .then(()=>console.log("✅ PWA activa"))
+    .catch(e=>console.error("❌ SW error", e));
+}
+</script>
+
+</body>
+</html>
+"""
 
 
       <nav class="nav flex flex-wrap gap-2 justify-center">
@@ -1060,104 +1096,7 @@ def clients_delete(client_id:int):
         conn.commit()
     return redirect(url_for("clients"))
 
-<!-- ==============================
-     iPHONE + GLASS + PWA
-================================ -->
 
-<link rel="manifest" href="/static/manifest.json">
-<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<meta name="theme-color" content="#facc15">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="World Jewelry">
-
-<style>
-body {
-  background: linear-gradient(180deg, #0b0b0b, #111);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  font-size: 15px;
-}
-
-.glass {
-  background: rgba(20,20,20,0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-}
-
-button, a.btn, .btn {
-  min-height: 48px;
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.gold-gradient {
-  background: linear-gradient(135deg, #facc15, #f59e0b);
-  color: #000;
-  border: none;
-}
-
-input, select, textarea {
-  min-height: 48px;
-  border-radius: 14px;
-  font-size: 16px;
-}
-
-.empeno-ficha {
-  background: rgba(0,0,0,0.35);
-  border-radius: 18px;
-  padding: 14px;
-  margin-bottom: 12px;
-}
-
-.ficha-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.ficha-actions a {
-  flex: 1 1 45%;
-  text-align: center;
-  border-radius: 14px;
-  padding: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #facc15;
-  font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  table { display: block; }
-  thead { display: none; }
-  tr {
-    display: block;
-    margin-bottom: 12px;
-    border-radius: 18px;
-    background: rgba(0,0,0,0.35);
-    padding: 10px;
-  }
-  td {
-    display: block;
-    padding: 6px 0;
-  }
-}
-
-a, button {
-  touch-action: manipulation;
-}
-</style>
-
-<!-- ==============================
-     /iPHONE + GLASS + PWA
-================================ -->
 
 
 LOANS_LIST_TPL = """
@@ -1256,6 +1195,106 @@ LOANS_LIST_TPL = """
     </table>
   </div>
 </section>
+"""
+IOS_PWA_STYLE = """
+<!-- ==============================
+     iPHONE + GLASS + PWA
+================================ -->
+
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+
+<style>
+body {
+  background: linear-gradient(180deg, #0b0b0b, #111);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  font-size: 15px;
+}
+
+.glass {
+  background: rgba(20,20,20,0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+
+button, a.btn, .btn {
+  min-height: 48px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #facc15, #f59e0b);
+  color: #000;
+  border: none;
+}
+
+input, select, textarea {
+  min-height: 48px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+
+.empeno-ficha {
+  background: rgba(0,0,0,0.35);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.ficha-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ficha-actions a {
+  flex: 1 1 45%;
+  text-align: center;
+  border-radius: 14px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #facc15;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  table { display: block; }
+  thead { display: none; }
+  tr {
+    display: block;
+    margin-bottom: 12px;
+    border-radius: 18px;
+    background: rgba(0,0,0,0.35);
+    padding: 10px;
+  }
+  td {
+    display: block;
+    padding: 6px 0;
+  }
+}
+
+a, button {
+  touch-action: manipulation;
+}
+</style>
+
+<!-- ==============================
+     /iPHONE + GLASS + PWA
+================================ -->
 """
 
 
@@ -4619,6 +4658,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
