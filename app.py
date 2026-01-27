@@ -659,23 +659,48 @@ BASE_SHELL = """
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+# ============================================================
+# iOS / iPhone UI BASE + LISTA EMPENOS TIPO APPLE WALLET
+# ✅ 1 línea → expandir (Apple Wallet)
+# ✅ Swipe left real → elimina (backend fetch)
+# ✅ Modal iOS confirmación
+# ✅ Haptic avanzado (vibrate fallback)
+# ✅ Nada se sale de la pantalla (iPhone safe width)
+# ============================================================
+
+from flask import request, redirect, url_for, jsonify
+from contextlib import closing
+
+# =========================
+# BASE SHELL (iOS SAFE)
+# =========================
+BASE_SHELL = """
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>{{ brand }} — {{ title or '' }}</title>
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ brand }}">
+<!-- ===== /PWA ===== -->
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
 /* =====================================================
    iPHONE SAFE WIDTH — NADA SE SALE DE LA PANTALLA
 ===================================================== */
-html, body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-header, main, footer {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+html, body { width:100%; max-width:100%; overflow-x:hidden; }
+header, main, footer { max-width:100vw; overflow-x:hidden; }
+*, *::before, *::after { box-sizing:border-box; }
+img, video, canvas, svg { max-width:100%; height:auto; }
 
 /* ================= INPUT DATE ================= */
 input[type="date"]{
@@ -694,6 +719,10 @@ input[type="date"]:focus{
 :root{
   --gold:#facc15;
   --gold-dark:#d97706;
+  --danger:#ff3b30;  /* iOS red */
+  --ok:#34c759;      /* iOS green */
+  --card:rgba(255,255,255,.08);
+  --stroke:rgba(255,255,255,.12);
 }
 
 html,body{
@@ -710,16 +739,13 @@ header{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   box-shadow:0 20px 40px rgba(0,0,0,.45);
 }
-
 .app-logo{
-  height:56px;
-  width:56px;
+  height:56px; width:56px;
   border-radius:18px;
   background:#020617;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display:flex; align-items:center; justify-content:center;
   font-size:28px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
 }
 
 /* ================= NAV ================= */
@@ -736,27 +762,51 @@ header{
 
 /* ================= GLASS ================= */
 .glass{
-  background:linear-gradient(
-    180deg,
-    rgba(255,255,255,.12),
-    rgba(255,255,255,.03)
-  );
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03));
   backdrop-filter:blur(18px);
   border-radius:22px;
+  border:1px solid var(--stroke);
+  box-shadow:0 30px 60px rgba(0,0,0,.45);
+  max-width:100%;
+}
+
+/* ================= BUTTONS (iOS) ================= */
+button,.btn{
+  min-height:46px;
+  padding:12px 16px;
+  border-radius:16px;
+  font-size:15px;
+  font-weight:800;
+  transition:.15s;
+  user-select:none;
+  -webkit-user-select:none;
+}
+button:active,.btn:active{ transform:scale(.97); }
+
+.btn-primary{
+  background:linear-gradient(135deg,#facc15,#f59e0b);
+  color:#111827;
+}
+.btn-danger{
+  background:rgba(255,59,48,.18);
+  border:1px solid rgba(255,59,48,.35);
+  color:#fff;
+}
+.btn-ok{
+  background:rgba(52,199,89,.18);
+  border:1px solid rgba(52,199,89,.35);
+  color:#fff;
+}
+.btn-ghost{
+  background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.12);
-  max-width:100%;
+  color:#fff;
 }
 
-/* ================= CARDS ================= */
-.empeno-ficha{
-  background:linear-gradient(135deg,#020617,#020617cc);
-  border-radius:20px;
-  padding:16px;
-  border:1px solid rgba(250,204,21,.4);
-  max-width:100%;
-}
+/* ================= TOUCH ================= */
+*{ -webkit-tap-highlight-color:transparent; }
 
-/* ================= TABLES iPHONE MODE ================= */
+/* ================= TABLES iPHONE MODE (si alguna queda) ================= */
 table{
   width:100%;
   max-width:100%;
@@ -764,12 +814,8 @@ table{
   overflow-x:auto;
   -webkit-overflow-scrolling:touch;
 }
-
 @media (max-width:768px){
-  table, thead, tbody, tr, td, th{
-    display:block;
-    width:100%;
-  }
+  table, thead, tbody, tr, td, th{ display:block; width:100%; }
   thead{ display:none; }
   tr{
     margin-bottom:16px;
@@ -777,45 +823,214 @@ table{
     border-radius:18px;
     padding:12px;
   }
-  td{
-    padding:6px 0;
-    word-break:break-word;
-  }
+  td{ padding:6px 0; word-break:break-word; }
 }
 
-/* ================= INPUTS / FILES / IMAGES ================= */
-input, select, textarea, button {
-  max-width:100%;
+/* =====================================================
+   LISTA EMPENOS TIPO APPLE WALLET
+===================================================== */
+.wallet-list{ display:grid; gap:12px; }
+
+.wallet-row{
+  position:relative;
+  overflow:hidden;
+  border-radius:22px;
+  border:1px solid rgba(250,204,21,.35);
+  background:linear-gradient(135deg, rgba(2,6,23,.96), rgba(2,6,23,.78));
+  box-shadow:0 18px 40px rgba(0,0,0,.55);
 }
 
-input[type="file"]{
+.wallet-swipe-bg{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:flex-end;
+  padding-right:16px;
+  background:linear-gradient(135deg, rgba(255,59,48,.28), rgba(255,59,48,.18));
+  pointer-events:none;
+}
+.wallet-swipe-bg .trash{
+  font-size:18px; font-weight:900;
+  display:flex; align-items:center; gap:8px;
+  color:#fff;
+  padding:10px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(0,0,0,.25);
+}
+
+.wallet-front{
+  position:relative;
+  transform:translateX(0px);
+  transition:transform .18s ease, box-shadow .18s ease;
+  will-change:transform;
+}
+
+.wallet-front.pressing{
+  box-shadow:0 24px 60px rgba(0,0,0,.65);
+}
+
+/* Header 1-line (tap to expand) */
+.wallet-header{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px;
+  padding:14px 14px;
+  cursor:pointer;
+}
+
+.wallet-title{
+  display:flex; flex-direction:column;
+  min-width:0;
+}
+.wallet-title .name{
+  font-weight:900;
+  font-size:16px;
+  letter-spacing:.2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.wallet-title .sub{
+  opacity:.78;
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.wallet-pill{
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.08);
+  white-space:nowrap;
+  font-weight:900;
+  font-size:12px;
+}
+
+.chev{
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  flex:0 0 auto;
+  transition:transform .22s ease;
+}
+.wallet-row.open .chev{ transform:rotate(180deg); }
+
+/* Expand details (Apple Wallet animation) */
+.wallet-details{
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .28s cubic-bezier(.2,.8,.2,1);
+  border-top:1px solid rgba(255,255,255,.10);
+}
+.wallet-row.open .wallet-details{
+  max-height:520px; /* suficiente */
+}
+.wallet-details-inner{
+  padding:14px;
+  display:grid;
+  gap:12px;
+}
+
+.wallet-meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.wallet-meta .box{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  padding:10px 12px;
+}
+.wallet-meta .k{
+  opacity:.75;
+  font-size:11px;
+}
+.wallet-meta .v{
+  font-weight:900;
+  font-size:14px;
+  margin-top:2px;
+  word-break:break-word;
+}
+
+/* Buttons row */
+.wallet-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.wallet-actions a, .wallet-actions button{
+  flex:1 1 140px;
+  text-align:center;
+}
+
+/* Floating + button */
+.fab{
+  position:fixed;
+  right:16px;
+  bottom:18px;
+  width:58px;
+  height:58px;
+  border-radius:20px;
+  background:linear-gradient(135deg, #34c759, #16a34a);
+  color:#08110a;
+  font-weight:1000;
+  font-size:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 18px 45px rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.2);
+  z-index:60;
+}
+.fab:active{ transform:scale(.96); }
+
+/* iOS Modal */
+.modal-backdrop{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(10px);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:16px;
+  z-index:80;
+}
+.modal-backdrop.show{ display:flex; }
+.modal-sheet{
+  width:min(520px, 100%);
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg, rgba(30,41,59,.92), rgba(2,6,23,.92));
+  box-shadow:0 30px 70px rgba(0,0,0,.65);
+  overflow:hidden;
+}
+.modal-head{
+  padding:16px 16px 8px 16px;
+}
+.modal-title{
+  font-weight:1000;
+  font-size:16px;
+}
+.modal-msg{
+  opacity:.82;
+  font-size:13px;
+  margin-top:6px;
+}
+.modal-actions{
+  display:grid;
+  gap:10px;
+  padding:14px 16px 16px 16px;
+}
+.modal-actions button{
   width:100%;
 }
 
-img{
-  max-width:100%;
-  height:auto;
-  border-radius:12px;
-}
-
-/* ================= BUTTONS ================= */
-button,.btn{
-  min-height:48px;
-  padding:14px 18px;
-  border-radius:16px;
-  font-size:16px;
-  font-weight:700;
-  transition:.15s;
-}
-button:active{ transform:scale(.96); }
-
-/* ================= TOUCH ================= */
-*{ -webkit-tap-highlight-color:transparent; }
-
-footer{
-  opacity:.6;
-  font-size:12px;
-}
+/* Footer */
+footer{ opacity:.6; font-size:12px; }
 </style>
 </head>
 
@@ -823,14 +1038,9 @@ footer{
 
 <header>
   <div class="max-w-7xl mx-auto px-4 py-6">
-
     <div class="flex items-center justify-between gap-4 mb-4">
       <div class="app-logo">💎</div>
-
-      <h1 class="text-3xl md:text-4xl font-extrabold text-black text-center flex-1">
-        {{ brand }}
-      </h1>
-
+      <h1 class="text-3xl md:text-4xl font-extrabold text-black text-center flex-1">{{ brand }}</h1>
       <div class="app-logo">💎</div>
     </div>
 
@@ -845,7 +1055,6 @@ footer{
       <a href="{{ url_for('settings_page') }}" class="{{ 'active' if active=='settings' else '' }}">Config</a>
       <a href="{{ url_for('logout') }}">Salir</a>
     </nav>
-
   </div>
 </header>
 
@@ -857,17 +1066,385 @@ footer{
   © {{ now.year if now else '' }} {{ brand }}
 </footer>
 
+<!-- iOS Confirm Modal -->
+<div id="iosModal" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">¿Eliminar?</div>
+      <div class="modal-msg" id="modalMsg">Esta acción no se puede deshacer.</div>
+    </div>
+    <div class="modal-actions">
+      <button id="modalConfirm" class="btn btn-danger">Eliminar</button>
+      <button id="modalCancel" class="btn btn-ghost">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
+/* ===============================
+   PWA (si existe sw.js)
+================================ */
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/static/sw.js")
     .then(()=>console.log("✅ PWA activa"))
     .catch(e=>console.error("❌ SW error", e));
 }
+
+/* ===============================
+   HAPTIC (iOS style)
+   - iPhone web: usa vibrate (fallback)
+================================ */
+function haptic(kind){
+  // kind: "tap" | "success" | "warning" | "error"
+  if (!navigator.vibrate) return;
+  if (kind === "tap") navigator.vibrate(10);
+  else if (kind === "success") navigator.vibrate([12, 40, 12]);
+  else if (kind === "warning") navigator.vibrate([20, 50, 20]);
+  else if (kind === "error") navigator.vibrate([30, 40, 30, 40, 30]);
+}
+
+/* ===============================
+   iOS Modal confirm
+================================ */
+const iosModal = document.getElementById("iosModal");
+const modalConfirm = document.getElementById("modalConfirm");
+const modalCancel = document.getElementById("modalCancel");
+let modalAction = null;
+
+function openModal({title, msg, onConfirm}){
+  document.getElementById("modalTitle").textContent = title || "¿Confirmar?";
+  document.getElementById("modalMsg").textContent = msg || "";
+  modalAction = onConfirm || null;
+  iosModal.classList.add("show");
+  haptic("warning");
+}
+function closeModal(){
+  iosModal.classList.remove("show");
+  modalAction = null;
+}
+modalCancel.addEventListener("click", ()=>{ haptic("tap"); closeModal(); });
+iosModal.addEventListener("click", (e)=>{ if(e.target === iosModal){ closeModal(); }});
+modalConfirm.addEventListener("click", async ()=>{
+  haptic("error");
+  try{
+    if(modalAction) await modalAction();
+  } finally {
+    closeModal();
+  }
+});
+
+/* ===============================
+   Apple Wallet Expand
+================================ */
+function initWalletExpands(){
+  document.querySelectorAll("[data-wallet-row]").forEach(row=>{
+    const header = row.querySelector("[data-wallet-header]");
+    if(!header) return;
+    header.addEventListener("click", ()=>{
+      haptic("tap");
+      row.classList.toggle("open");
+    });
+  });
+}
+
+/* ===============================
+   Swipe Left Delete (real backend)
+   - swipes content left, shows red bg
+   - on release beyond threshold => confirm modal
+================================ */
+function initSwipeDelete(){
+  const THRESH = 80;      // px to trigger
+  const MAX = 140;        // max slide
+  const SLOP = 10;        // ignore tiny moves
+
+  document.querySelectorAll("[data-swipe]").forEach(card=>{
+    const front = card.querySelector(".wallet-front");
+    const delUrl = card.getAttribute("data-delete-url");
+    if(!front || !delUrl) return;
+
+    let startX=0, startY=0, curX=0;
+    let dragging=false, locked=false;
+
+    const onDown = (x,y)=>{
+      startX=x; startY=y; curX=0;
+      dragging=false; locked=false;
+      front.classList.add("pressing");
+    };
+    const onMove = (x,y)=>{
+      const dx = x - startX;
+      const dy = y - startY;
+
+      if(!locked){
+        if(Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > SLOP){
+          locked=true; // scroll vertical
+          return;
+        }
+        if(Math.abs(dx) > SLOP){
+          dragging=true;
+          locked=true;
+        }
+      }
+      if(!dragging) return;
+
+      // only swipe left
+      let tx = Math.min(0, dx);
+      tx = Math.max(-MAX, tx);
+      curX = tx;
+      front.style.transform = `translateX(${tx}px)`;
+    };
+    const onUp = ()=>{
+      front.classList.remove("pressing");
+      if(!dragging){
+        front.style.transform = "translateX(0px)";
+        return;
+      }
+
+      if(Math.abs(curX) > THRESH){
+        // keep open position while confirm
+        front.style.transform = `translateX(${-MAX}px)`;
+
+        openModal({
+          title: "Eliminar empeño",
+          msg: "¿Seguro que deseas eliminar este registro? No se puede deshacer.",
+          onConfirm: async ()=>{
+            // backend delete
+            const r = await fetch(delUrl, {
+              method: "POST",
+              headers: { "X-Requested-With": "fetch" }
+            });
+            const data = await r.json().catch(()=>({ok:false}));
+            if(data && data.ok){
+              haptic("success");
+              // nice Apple-like collapse
+              card.style.transition = "transform .2s ease, opacity .2s ease, height .25s ease";
+              card.style.opacity = "0";
+              card.style.transform = "scale(.98)";
+              setTimeout(()=>{ card.remove(); }, 220);
+            } else {
+              haptic("error");
+              // reset
+              front.style.transform = "translateX(0px)";
+              alert(data.error || "No se pudo eliminar.");
+            }
+          }
+        });
+
+        // if cancel => reset
+        modalCancel.onclick = ()=>{
+          haptic("tap");
+          closeModal();
+          front.style.transform = "translateX(0px)";
+        };
+
+      } else {
+        // reset
+        front.style.transform = "translateX(0px)";
+      }
+    };
+
+    // Touch events
+    front.addEventListener("touchstart", (e)=>{
+      const t = e.touches[0];
+      onDown(t.clientX, t.clientY);
+    }, {passive:true});
+
+    front.addEventListener("touchmove", (e)=>{
+      const t = e.touches[0];
+      onMove(t.clientX, t.clientY);
+    }, {passive:true});
+
+    front.addEventListener("touchend", ()=>{ onUp(); }, {passive:true});
+
+    // Mouse events (desktop)
+    front.addEventListener("mousedown", (e)=>{ onDown(e.clientX, e.clientY); });
+    window.addEventListener("mousemove", (e)=>{ onMove(e.clientX, e.clientY); });
+    window.addEventListener("mouseup", ()=>{ onUp(); });
+  });
+}
+
+/* init */
+document.addEventListener("DOMContentLoaded", ()=>{
+  initWalletExpands();
+  initSwipeDelete();
+});
 </script>
 
 </body>
 </html>
 """
+
+# =========================
+# BODY: EMPENOS (APPLE WALLET LIST)
+# =========================
+EMPENOS_WALLET_TPL = """
+<div class="glass p-4 md:p-6">
+  <div class="flex items-center justify-between gap-3 mb-4">
+    <div>
+      <div class="text-xl font-extrabold" style="color:var(--gold)">Empeños</div>
+      <div class="opacity-75 text-sm">Desliza a la izquierda para eliminar • toca para ver detalles</div>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('empeno_new') }}">+ Nuevo</a>
+  </div>
+
+  <form class="flex gap-2 mb-4" method="GET" action="{{ url_for('empenos_index') }}">
+    <input class="w-full rounded-2xl px-4 py-3 text-black" name="q" value="{{ q or '' }}"
+           placeholder="Buscar cliente, ID, tel o artículo"/>
+    <button class="btn btn-primary" type="submit">Buscar</button>
+  </form>
+
+  <div class="wallet-list">
+    {% for r in rows %}
+    <div class="wallet-row" data-wallet-row data-swipe data-delete-url="{{ url_for('empeno_delete_api', loan_id=r['id']) }}">
+      <div class="wallet-swipe-bg">
+        <div class="trash">🗑️ Eliminar</div>
+      </div>
+
+      <div class="wallet-front">
+        <!-- 1 LÍNEA -->
+        <div class="wallet-header" data-wallet-header>
+          <div class="wallet-title">
+            <div class="name">{{ r['customer_name'] or 'Cliente' }}</div>
+            <div class="sub">
+              #{{ r['id'] }} • {{ r['item_name'] }} • {{ (r['weight_grams'] or 0) }} g
+            </div>
+          </div>
+
+          <div class="wallet-pill">
+            <span>{{ "USD" if currency=='USD' else "$" }}</span>
+            <span>{{ "%.2f"|format(r['amount'] or 0) }}</span>
+          </div>
+
+          <div class="chev">⌄</div>
+        </div>
+
+        <!-- EXPAND -->
+        <div class="wallet-details">
+          <div class="wallet-details-inner">
+
+            <div class="wallet-meta">
+              <div class="box">
+                <div class="k">Estado</div>
+                <div class="v">{{ r['status'] or 'ACTIVO' }}</div>
+              </div>
+              <div class="box">
+                <div class="k">Interés</div>
+                <div class="v">{{ "%.2f"|format(r['interest_rate'] or 0) }}% / mes</div>
+              </div>
+              <div class="box">
+                <div class="k">Teléfono</div>
+                <div class="v">{{ r['phone'] or '' }}</div>
+              </div>
+              <div class="box">
+                <div class="k">Vence</div>
+                <div class="v">{{ r['due_date'] or '' }}</div>
+              </div>
+            </div>
+
+            <div class="wallet-actions">
+              <a class="btn btn-ghost" href="{{ url_for('ticket_view', loan_id=r['id']) }}">🧾 Recibo</a>
+              <a class="btn btn-ghost" href="{{ url_for('edit_loan_page', loan_id=r['id']) }}">✏️ Editar</a>
+              <a class="btn btn-ok" href="{{ url_for('payment_page', loan_id=r['id']) }}">💵 Pago</a>
+              <a class="btn btn-ghost" href="{{ url_for('empeno_legal_view', loan_id=r['id']) }}">📄 Documento</a>
+
+              <!-- botón eliminar (por si no swipes) -->
+              <button class="btn btn-danger" type="button"
+                onclick="(function(){
+                  haptic('warning');
+                  const row = document.querySelector('[data-delete-url=\\'{{ url_for('empeno_delete_api', loan_id=r['id']) }}\\']');
+                  if(!row) return;
+                  const front = row.querySelector('.wallet-front');
+                  if(front) front.style.transform='translateX(-140px)';
+                  openModal({
+                    title:'Eliminar empeño',
+                    msg:'¿Seguro? No se puede deshacer.',
+                    onConfirm: async ()=>{
+                      const r = await fetch('{{ url_for('empeno_delete_api', loan_id=r['id']) }}', {method:'POST', headers:{'X-Requested-With':'fetch'}});
+                      const data = await r.json().catch(()=>({ok:false}));
+                      if(data.ok){
+                        haptic('success');
+                        row.style.opacity='0';
+                        row.style.transform='scale(.98)';
+                        setTimeout(()=>row.remove(),220);
+                      }else{
+                        haptic('error');
+                        if(front) front.style.transform='translateX(0px)';
+                        alert(data.error || 'No se pudo eliminar.');
+                      }
+                    }
+                  });
+                })();">
+                🗑️ Eliminar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+      <div class="glass p-6 text-center opacity-80">No hay empeños.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Floating + -->
+<a class="fab" href="{{ url_for('empeno_new') }}" aria-label="Nuevo empeño">+</a>
+"""
+
+# =========================
+# BACKEND: DELETE API (SWIPE)
+# =========================
+@app.route("/empenos/<int:loan_id>/delete_api", methods=["POST"])
+@login_required
+def empeno_delete_api(loan_id: int):
+    from contextlib import closing
+
+    # (opcional) solo admin:
+    # if session.get("role") != "admin":
+    #     return jsonify({"ok": False, "error": "Acceso denegado"}), 403
+
+    try:
+        with closing(get_db()) as conn:
+            row = conn.execute("SELECT id FROM loans WHERE id=?", (loan_id,)).fetchone()
+            if not row:
+                return jsonify({"ok": False, "error": "No encontrado"}), 404
+
+            conn.execute("DELETE FROM loans WHERE id=?", (loan_id,))
+            conn.commit()
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# =========================
+# EJEMPLO: EMPENOS INDEX (USA EL WALLET TPL)
+# =========================
+@app.route("/empenos")
+@login_required
+def empenos_index():
+    from contextlib import closing
+
+    q = (request.args.get("q") or "").strip()
+    sql = "SELECT * FROM loans"
+    params = []
+
+    if q:
+        sql += " WHERE customer_name LIKE ? OR phone LIKE ? OR item_name LIKE ? OR customer_id LIKE ?"
+        like = f"%{q}%"
+        params = [like, like, like, like]
+
+    sql += " ORDER BY id DESC"
+
+    with closing(get_db()) as conn:
+        rows = conn.execute(sql, params).fetchall()
+
+    # currency opcional
+    currency = "USD"
+
+    body = render_template_string(EMPENOS_WALLET_TPL, rows=rows, q=q, currency=currency)
+    return render_page(body, title="Empeños", active="loans")
+
 
 
 
@@ -4678,6 +5255,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
