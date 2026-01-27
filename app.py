@@ -56,6 +56,9 @@ def get_db():
     return conn
 
 
+# =========================
+# SCHEMA
+# =========================
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS loans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,10 +150,32 @@ CREATE TABLE IF NOT EXISTS password_resets (
 """
 
 
+# =========================
+# INIT DB
+# =========================
 def init_db():
     print("🟢 Inicializando base de datos...")
     with closing(get_db()) as conn:
         conn.executescript(SCHEMA)
+        conn.commit()
+
+
+# =========================
+# FIX USERS TABLE (MIGRACIÓN SEGURA)
+# =========================
+def ensure_users_columns():
+    with closing(get_db()) as conn:
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)")]
+
+        if "name" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
+
+        if "role" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'staff'")
+
+        if "created_at" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
+
         conn.commit()
 
 
@@ -168,15 +193,17 @@ try:
 except Exception as e:
     print("🔴 Error DB, recreando:", e)
     init_db()
-    
+
+
 # =========================
-# FIX USERS TABLE
+# APPLY USERS MIGRATION
 # =========================
 try:
     ensure_users_columns()
     print("🟢 Tabla users verificada")
 except Exception as e:
     print("🔴 Error ajustando users:", e)
+
 
 # =========================
 # SERVIR FOTOS DE ARTÍCULOS
@@ -4566,6 +4593,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
