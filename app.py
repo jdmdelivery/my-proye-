@@ -1075,32 +1075,6 @@ document.querySelectorAll('[data-count]').forEach(el => {{
 
     return render_page(body, title="Dashboard", active="dashboard")
 
-<script>
-/* ===== ANIMACIÓN DE NÚMEROS ===== */
-document.querySelectorAll('[data-count]').forEach(el => {{
-  const target = parseFloat(el.dataset.count);
-  let val = 0;
-  const step = target / 35;
-
-  function animate() {{
-    val += step;
-    if (val >= target) val = target;
-    el.textContent = Number.isInteger(target)
-      ? Math.round(val)
-      : '$' + val.toLocaleString(undefined, {{
-          minimumFractionDigits:2,
-          maximumFractionDigits:2
-        }});
-    if (val < target) requestAnimationFrame(animate);
-  }}
-  animate();
-}});
-</script>
-"""
-
-
-    return render_page(body, title="Dashboard", active="dashboard")
-
 
 @app.route("/clientes/nuevo", methods=["POST"])
 @login_required
@@ -4661,6 +4635,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
