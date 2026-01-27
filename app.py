@@ -2021,7 +2021,6 @@ TICKET_TPL = """
 </div>
 """
 
-
 # ======================================================
 # RUTA DEL RECIBO
 # ======================================================
@@ -2380,6 +2379,7 @@ def payment_receipt(payment_id: int):
 """
 
     return render_page(body, title="Recibo de pago", active="loans")
+
 
 
 
@@ -4593,6 +4593,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
