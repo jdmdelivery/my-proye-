@@ -1381,58 +1381,50 @@ def empenos_index():
     params = []
     where = []
 
-    # ================== FILTRO DE BÚSQUEDA ==================
     if q:
         like = f"%{q}%"
-        where.append(
-            "(l.item_name LIKE ? OR l.customer_name LIKE ? OR l.phone LIKE ?)"
-        )
+        where.append("(l.item_name LIKE ? OR l.customer_name LIKE ? OR l.phone LIKE ?)")
         params.extend([like, like, like])
 
-    # ================== FILTRO DE ESTADO ==================
     if status and status != "TODOS":
         where.append("l.status = ?")
         params.append(status)
 
     where_sql = "WHERE " + " AND ".join(where) if where else ""
 
-    # ================== SQL PRINCIPAL ==================
-    sql = """
-SELECT
-    l.id,
-    l.created_at,
-    l.item_name,
-    l.weight_grams,
-    l.amount,
-    l.interest_rate,
-    l.status,
-    l.due_date,
-    l.customer_name,
-    l.phone
-FROM loans l
-{where}
-ORDER BY l.id DESC
-LIMIT 500
-""".format(where=where_sql)
+    # ===== SQL BLINDADO (SIN TRIPLE COMILLAS) =====
+    sql = (
+        "SELECT "
+        "l.id, "
+        "l.created_at, "
+        "l.item_name, "
+        "l.weight_grams, "
+        "l.amount, "
+        "l.interest_rate, "
+        "l.status, "
+        "l.due_date, "
+        "l.customer_name, "
+        "l.phone "
+        "FROM loans l "
+        f"{where_sql} "
+        "ORDER BY l.id DESC "
+        "LIMIT 500"
+    )
 
-    # ================== EJECUCIÓN ==================
     with closing(get_db()) as conn:
         rows = conn.execute(sql, params).fetchall()
 
-    # ================== NORMALIZAR RESULTADOS ==================
     fixed_rows = []
     for r in rows:
         row = dict(r)
         row["loan_customer_name"] = (row.get("customer_name") or "").strip()
         fixed_rows.append(row)
 
-    # ================== VALORES POR DEFECTO ==================
     now = datetime.now()
     default_rate = float(get_setting("default_interest_rate", "20"))
     term_days = int(get_setting("default_term_days", "90"))
     default_due = (now + timedelta(days=term_days)).strftime("%Y-%m-%d")
 
-    # ================== RENDER ==================
     body = render_template_string(
         LOANS_LIST_TPL,
         rows=fixed_rows,
@@ -1444,6 +1436,7 @@ LIMIT 500
     )
 
     return render_page(body, title="Empeños", active="loans")
+
 
 
 
@@ -4723,6 +4716,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
