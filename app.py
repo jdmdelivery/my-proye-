@@ -1795,7 +1795,6 @@ EDIT_TPL = """
              class="w-full rounded-xl border bg-black/40 p-2"/>
     </div>
 
-    <!-- 📸 FOTO DEL ARTÍCULO -->
     <div class="ficha-line">
       <label class="block text-sm mb-1">Foto del artículo</label>
 
@@ -1829,6 +1828,7 @@ EDIT_TPL = """
   </form>
 </div>
 """
+
 # ====== Detalle / Ticket Empeño ======
 DETAIL_TPL = """
 <div class="max-w-3xl mx-auto empeno-ficha glass p-6 rounded-2xl">
@@ -1884,16 +1884,16 @@ DETAIL_TPL = """
   {% endif %}
 
   <div class="ficha-actions mt-6 flex flex-wrap gap-3">
-    <a href="{{ url_for('ticket', loan_id=row.id) }}">🧾 Recibo</a>
-    <a href="{{ url_for('edit_loan_page', loan_id=row.id) }}">✏️ Editar</a>
-    <a href="{{ url_for('payment_page', loan_id=row.id) }}">💰 Pago</a>
-    <a href="{{ url_for('empenos_index') }}">⬅ Volver</a>
+    <a href="{{ url_for('ticket', loan_id=row.id) }}">Recibo</a>
+    <a href="{{ url_for('edit_loan_page', loan_id=row.id) }}">Editar</a>
+    <a href="{{ url_for('payment_page', loan_id=row.id) }}">Pago</a>
+    <a href="{{ url_for('empenos_index') }}">Volver</a>
   </div>
 
 </div>
 """
 
-
+# ====== RUTA EDITAR ======
 @app.route("/edit/<int:loan_id>", methods=["GET", "POST"])
 @login_required
 def edit_loan_page(loan_id: int):
@@ -1902,7 +1902,6 @@ def edit_loan_page(loan_id: int):
     import uuid
     from contextlib import closing
 
-    # 🔎 Leer registro actual
     with closing(get_db()) as conn:
         row = conn.execute(
             "SELECT * FROM loans WHERE id=?",
@@ -1916,12 +1915,9 @@ def edit_loan_page(loan_id: int):
 
         item_name = request.form.get("item_name", "")
         weight = request.form.get("weight_grams", 0)
-
-        # 🔴 ESTOS CAMPOS FALTABAN
         customer_name = request.form.get("customer_name", "")
         customer_id = request.form.get("customer_id", "")
         phone = request.form.get("phone", "")
-
         amount = request.form.get("amount", 0)
         rate = request.form.get("interest_rate", 0)
         due_date = request.form.get("due_date")
@@ -1934,7 +1930,6 @@ def edit_loan_page(loan_id: int):
             if photo and photo.filename:
                 upload_dir = Path("uploads/items")
                 upload_dir.mkdir(parents=True, exist_ok=True)
-
                 ext = Path(photo.filename).suffix.lower()
                 fname = f"item_{loan_id}_{uuid.uuid4().hex}{ext}"
                 photo.save(upload_dir / fname)
@@ -4739,6 +4734,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
