@@ -1603,53 +1603,62 @@ def nuevo_empeno_page():
             photo_path = "/uploads/" + fname
 
         # ===== GUARDAR EN BD =====
-        with closing(get_db()) as conn:
+with closing(get_db()) as conn:
 
-            conn.execute("""
-                INSERT INTO loans (
-                    created_at,
-                    item_name,
-                    weight_grams,
-                    customer_name,
-                    customer_id,
-                    phone,
-                    amount,
-                    interest_rate,
-                    due_date,
-                    photo_path
-                )
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            """, (
-                created_at,
-                item_name,
-                weight_grams,
-                customer_name,
-                customer_id,
-                phone,
-                amount,
-                interest_rate,
-                due_date,
-                photo_path
-            ))
+    sql_loan = (
+        "INSERT INTO loans ("
+        "created_at, "
+        "item_name, "
+        "weight_grams, "
+        "customer_name, "
+        "customer_id, "
+        "phone, "
+        "amount, "
+        "interest_rate, "
+        "due_date, "
+        "photo_path"
+        ") VALUES (?,?,?,?,?,?,?,?,?,?)"
+    )
 
-            conn.execute("""
-                INSERT INTO cash_movements (
-                    when_at,
-                    concept,
-                    amount,
-                    ref
-                )
-                VALUES (?,?,?,?)
-            """, (
-                created_at,
-                f"Desembolso empeño {customer_name}",
-                -amount,
-                "LOAN"
-            ))
+    conn.execute(
+        sql_loan,
+        (
+            created_at,
+            item_name,
+            weight_grams,
+            customer_name,
+            customer_id,
+            phone,
+            amount,
+            interest_rate,
+            due_date,
+            photo_path
+        )
+    )
 
-            conn.commit()
+    sql_cash = (
+        "INSERT INTO cash_movements ("
+        "when_at, "
+        "concept, "
+        "amount, "
+        "ref"
+        ") VALUES (?,?,?,?)"
+    )
 
-        return redirect(url_for("empenos_index"))
+    conn.execute(
+        sql_cash,
+        (
+            created_at,
+            f"Desembolso empeño {customer_name}",
+            -amount,
+            "LOAN"
+        )
+    )
+
+    conn.commit()
+
+return redirect(url_for("empenos_index"))
+
 
     # =========================
     # GET → FORMULARIO
@@ -4731,6 +4740,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
