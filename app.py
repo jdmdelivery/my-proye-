@@ -638,7 +638,7 @@ def reset():
     return redirect(url_for("login", msg="Contraseña actualizada. Inicia sesión."))
 
 # ====== PLANTILLA BASE ======
-
+BASE_SHELL = """
 <!doctype html>
 <html lang="es">
 <head>
@@ -658,6 +658,7 @@ def reset():
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+/* ===== SAFE ===== */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
 *{-webkit-tap-highlight-color:transparent}
 
@@ -667,13 +668,14 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   --ok:#34c759;
 }
 
-/* ===== BACKGROUND ===== */
+/* ===== BACKGROUND iOS / APPLE MUSIC STYLE ===== */
 html,body{
   background:
     radial-gradient(1200px 600px at 10% -10%, #1e293b 0%, transparent 60%),
     radial-gradient(900px 500px at 90% 10%, #0f172a 0%, transparent 60%),
     linear-gradient(180deg,#020617,#000);
   color:#e5e7eb;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
 }
 
 /* ===== HEADER ===== */
@@ -682,15 +684,19 @@ header{
   box-shadow:0 20px 40px rgba(0,0,0,.45);
 }
 .app-logo{
-  height:52px;width:52px;border-radius:16px;
+  height:52px;width:52px;
+  border-radius:16px;
   background:#020617;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   font-size:26px;
 }
 
-/* ===== MENU GLASS ===== */
+/* ===== GLASS MENU ===== */
 .menu-backdrop{
-  position:fixed;inset:0;
+  position:fixed;
+  inset:0;
   background:rgba(0,0,0,.55);
   backdrop-filter:blur(14px);
   display:none;
@@ -700,7 +706,8 @@ header{
 
 .menu-panel{
   position:absolute;
-  top:20px;left:16px;
+  top:20px;
+  left:16px;
   width:min(90%,340px);
   background:linear-gradient(180deg,rgba(30,41,59,.95),rgba(2,6,23,.95));
   border-radius:28px;
@@ -709,7 +716,8 @@ header{
 }
 
 .menu-item{
-  display:flex;align-items:center;
+  display:flex;
+  align-items:center;
   gap:14px;
   padding:14px 16px;
   border-radius:18px;
@@ -729,7 +737,7 @@ header{
 <header class="px-4 py-5">
   <div class="flex items-center justify-between">
 
-    <!-- ☰ IZQUIERDA -->
+    <!-- ☰ MENU IZQUIERDA -->
     <button id="menuBtn"
       class="w-12 h-12 rounded-2xl bg-black/80 text-white text-2xl font-black flex items-center justify-center">
       ☰
@@ -739,12 +747,12 @@ header{
       {{ brand }}
     </h1>
 
-    <!-- LOGO DERECHA -->
+    <!-- LOGO -->
     <div class="app-logo">💎</div>
   </div>
 </header>
 
-<!-- ===== iOS GLASS MENU ===== -->
+<!-- ===== MENU iOS GLASS ===== -->
 <div id="menuBackdrop" class="menu-backdrop">
   <div class="menu-panel">
     <a class="menu-item" href="{{ url_for('dashboard') }}">🏠 Inicio</a>
@@ -767,7 +775,7 @@ header{
 </main>
 
 <script>
-/* ===== HAPTIC ENGINE ===== */
+/* ===== HAPTIC ENGINE iOS ===== */
 function haptic(type="tap"){
   if(!navigator.vibrate) return;
   const patterns={
@@ -806,6 +814,7 @@ document.querySelectorAll(".menu-item").forEach(el=>{
 
 </body>
 </html>
+
 
 
 
@@ -4668,6 +4677,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
