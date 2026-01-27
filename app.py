@@ -942,7 +942,7 @@ def dashboard():
     cur.close()
     conn.close()
 
-    # ================== FICHAS VENCIMIENTOS ==================
+    # ================== VENCIMIENTOS ==================
     fichas = ""
     for r in upcoming:
         fichas += f"""
@@ -971,46 +971,48 @@ def dashboard():
         </div>
         """
 
+    caja_color = "green" if caja >= 0 else "red"
+
     # ================== BODY ==================
     body = f"""
 <div class="space-y-10">
 
-  <!-- ===== BOTÓN FACTURACIÓN ===== -->
+  <!-- BOTÓN FACTURACIÓN -->
   <div class="flex justify-end">
-    <a href="{url_for('facturacion')}"
+    <a href="{{{{ url_for('facturacion') }}}}"
        onclick="haptic('nav')"
        class="gold-gradient px-6 py-3 rounded-2xl text-lg font-extrabold shadow-xl">
        🧾 Facturación
     </a>
   </div>
 
-  <!-- ===== MÉTRICAS iOS ===== -->
+  <!-- MÉTRICAS iOS -->
   <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
     <!-- Empeños activos -->
     <div class="ios-card" onclick="haptic('tap')">
-      <div class="ios-glow"></div>
+      <div class="ios-glow music-wave gold"></div>
       <div class="ios-label">Empeños activos</div>
-      <div class="ios-value">{activos}</div>
+      <div class="ios-value" data-count="{activos}">0</div>
     </div>
 
     <!-- Capital activo -->
     <div class="ios-card green" onclick="haptic('tap')">
-      <div class="ios-glow"></div>
+      <div class="ios-glow music-wave green"></div>
       <div class="ios-label">Capital activo</div>
-      <div class="ios-value">${capital_prestado:,.2f}</div>
+      <div class="ios-value" data-count="{capital_prestado:.2f}">0</div>
     </div>
 
-    <!-- Caja de hoy -->
-    <div class="ios-card blue" onclick="haptic('tap')">
-      <div class="ios-glow"></div>
+    <!-- Caja -->
+    <div class="ios-card {caja_color}" onclick="haptic('tap')">
+      <div class="ios-glow music-wave {caja_color}"></div>
       <div class="ios-label">Caja de hoy</div>
-      <div class="ios-value">${caja:,.2f}</div>
+      <div class="ios-value" data-count="{caja:.2f}">0</div>
     </div>
 
   </section>
 
-  <!-- ===== VENCIMIENTOS ===== -->
+  <!-- VENCIMIENTOS -->
   <section class="glass rounded-3xl p-6">
     <h2 class="text-xl font-extrabold text-yellow-300 mb-4">
       ⏰ Vencimientos próximos (7 días)
@@ -1021,28 +1023,37 @@ def dashboard():
   </section>
 
 </div>
-"""
 
-  <!-- RESET SISTEMA -->
-  <div class="glass rounded-2xl p-4 mt-6 border border-red-500/30">
-    <h3 class="text-red-400 font-bold mb-2">⚠️ Sistema</h3>
-    <p class="text-sm text-red-300/80 mb-3">
-      Esta acción elimina <b>todos los empeños, pagos y caja</b>.
-    </p>
-    <a href="/system/reset"
-       class="inline-block bg-red-600 hover:bg-red-700
-              text-white font-extrabold
-              px-5 py-3 rounded-xl shadow-lg transition">
-      🧹 BORRAR TODO EL SISTEMA
-    </a>
-  </div>
+<script>
+/* ===== COUNT UP iOS ===== */
+document.querySelectorAll('[data-count]').forEach(el=>{
+  const target = parseFloat(el.dataset.count);
+  let val = 0;
+  const step = target / 40;
 
-</div>
+  function animate(){
+    val += step;
+    if(val >= target) val = target;
+    el.textContent = Number.isInteger(target)
+      ? Math.round(val)
+      : '$' + val.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(val < target) requestAnimationFrame(animate);
+  }
+  animate();
+});
+
+/* ===== APPLE MUSIC WAVES ===== */
+document.querySelectorAll('.music-wave').forEach(w=>{
+  let x=0;
+  setInterval(()=>{
+    x=(x+1)%100;
+    w.style.transform = `translate(${x}px, ${-x/2}px)`;
+  },60);
+});
+</script>
 """
 
     return render_page(body, title="Dashboard", active="dashboard")
-
-
 
 @app.route("/clientes/nuevo", methods=["POST"])
 @login_required
@@ -4657,6 +4668,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
