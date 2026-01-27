@@ -814,10 +814,7 @@ document.querySelectorAll(".menu-item").forEach(el=>{
 
 </body>
 </html>
-
-
-
-
+"""
 
 # =========================
 # EJEMPLO: EMPENOS INDEX (USA EL WALLET TPL)
@@ -4677,6 +4674,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
