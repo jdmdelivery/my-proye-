@@ -168,6 +168,15 @@ try:
 except Exception as e:
     print("🔴 Error DB, recreando:", e)
     init_db()
+    
+# =========================
+# FIX USERS TABLE
+# =========================
+try:
+    ensure_users_columns()
+    print("🟢 Tabla users verificada")
+except Exception as e:
+    print("🔴 Error ajustando users:", e)
 
 # =========================
 # SERVIR FOTOS DE ARTÍCULOS
@@ -274,32 +283,76 @@ LOGIN_TPL = """
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+<!-- ===== /PWA ===== -->
+
 <title>{{ brand }} - Iniciar sesión</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>.glass{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);}</style>
+<style>
+.glass{
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+}
+</style>
 </head>
+
 <body class="min-h-screen flex items-center justify-center bg-stone-900 text-stone-100">
+
   <div class="w-full max-w-sm glass p-6 rounded-2xl">
     <div class="text-center mb-4">
       <div class="text-4xl">💎</div>
       <h1 class="text-2xl font-extrabold mt-1">{{ brand }}</h1>
       <p class="text-sm text-yellow-200/70 mt-1">Inicia sesión para continuar</p>
     </div>
-    {% if msg %}<div class="mb-3 p-2 bg-emerald-900/40 border border-emerald-700 rounded">{{ msg }}</div>{% endif %}
-    {% if error %}<div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">{{ error }}</div>{% endif %}
+
+    {% if msg %}
+      <div class="mb-3 p-2 bg-emerald-900/40 border border-emerald-700 rounded">{{ msg }}</div>
+    {% endif %}
+
+    {% if error %}
+      <div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">{{ error }}</div>
+    {% endif %}
+
     <form method="post" class="space-y-3">
-      <input name="username" placeholder="Usuario" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <input name="password" type="password" placeholder="Contraseña" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <button class="w-full bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">Entrar</button>
+      <input name="username" placeholder="Usuario" required
+        class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+      <input name="password" type="password" placeholder="Contraseña" required
+        class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+      <button class="w-full bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">
+        Entrar
+      </button>
     </form>
+
     <div class="text-center mt-3">
-      <a class="text-yellow-300 underline" href="{{ url_for('recover') }}">¿Olvidaste usuario o contraseña?</a>
+      <a class="text-yellow-300 underline" href="{{ url_for('recover') }}">
+        ¿Olvidaste usuario o contraseña?
+      </a>
     </div>
   </div>
+
+  <!-- Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/sw.js")
+        .then(() => console.log("✅ PWA activa"))
+        .catch(err => console.error("❌ SW error", err));
+    }
+  </script>
+
 </body>
 </html>
 """
+
 @app.route("/uploads/legal/<path:filename>")
 def legal_uploads(filename):
     return send_from_directory("uploads/legal", filename)
@@ -348,25 +401,77 @@ RECOVER_TPL = """
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
 <title>{{ brand }} — Recuperar acceso</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>.glass{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);}</style>
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+<!-- ===== /PWA ===== -->
+
+<style>
+.glass{
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+}
+</style>
 </head>
+
 <body class="min-h-screen flex items-center justify-center bg-stone-900 text-stone-100">
+
   <div class="w-full max-w-lg glass p-6 rounded-2xl">
     <h1 class="text-xl font-bold text-yellow-300 mb-3">Recuperar acceso</h1>
-    <p class="text-sm text-yellow-200/80 mb-3">Se enviará un correo con tus usuarios y enlaces para restablecer la contraseña a <b>{{ email }}</b>.</p>
-    {% if msg %}<div class="mb-3 p-2 bg-emerald-900/40 border border-emerald-700 rounded">{{ msg }}</div>{% endif %}
-    {% if error %}<div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">{{ error }}</div>{% endif %}
+
+    <p class="text-sm text-yellow-200/80 mb-3">
+      Se enviará un correo con tus usuarios y enlaces para restablecer la contraseña
+      a <b>{{ email }}</b>.
+    </p>
+
+    {% if msg %}
+      <div class="mb-3 p-2 bg-emerald-900/40 border border-emerald-700 rounded">
+        {{ msg }}
+      </div>
+    {% endif %}
+
+    {% if error %}
+      <div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">
+        {{ error }}
+      </div>
+    {% endif %}
+
     <form method="post" class="space-y-3">
-      <button class="bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">Enviar correo de recuperación</button>
-      <a href="{{ url_for('login') }}" class="px-4 py-2 rounded-xl border border-yellow-200/30">Volver</a>
+      <button class="bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">
+        Enviar correo de recuperación
+      </button>
+
+      <a href="{{ url_for('login') }}"
+         class="px-4 py-2 rounded-xl border border-yellow-200/30 text-center block">
+        Volver
+      </a>
     </form>
   </div>
+
+  <!-- Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/sw.js")
+        .then(() => console.log("✅ PWA activa (recover)"))
+        .catch(err => console.error("❌ SW error", err));
+    }
+  </script>
+
 </body>
 </html>
 """
+
 
 @app.route("/recover", methods=["GET","POST"])
 def recover():
@@ -404,37 +509,72 @@ RESET_TPL = """
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
 <title>{{ brand }} — Restablecer contraseña</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- ===== PWA FULL SCREEN ===== -->
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="{{ brand }}">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+<!-- ===== /PWA ===== -->
 
-<link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
-<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
-<meta name="theme-color" content="#000000">
-
-<style>.glass{background:rgba(255,255,255,.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);}</style>
+<style>
+.glass{
+  background:rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+}
+</style>
 </head>
+
 <body class="min-h-screen flex items-center justify-center bg-stone-900 text-stone-100">
   <div class="w-full max-w-sm glass p-6 rounded-2xl">
     <h1 class="text-xl font-bold text-yellow-300 mb-3">Restablecer contraseña</h1>
-    <p class="text-sm text-yellow-200/80 mb-3">Usuario: <b>{{ username }}</b></p>
-    {% if error %}<div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">{{ error }}</div>{% endif %}
+    <p class="text-sm text-yellow-200/80 mb-3">
+      Usuario: <b>{{ username }}</b>
+    </p>
+
+    {% if error %}
+      <div class="mb-3 p-2 bg-red-900/40 border border-red-700 rounded">
+        {{ error }}
+      </div>
+    {% endif %}
+
     <form method="post" class="space-y-3">
       <input type="hidden" name="token" value="{{ token }}"/>
       <input type="hidden" name="u" value="{{ username }}"/>
-      <input name="password" type="password" placeholder="Nueva contraseña" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <input name="password2" type="password" placeholder="Repetir contraseña" required class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-      <button class="w-full bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">Guardar</button>
+
+      <input name="password" type="password" placeholder="Nueva contraseña" required
+        class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+      <input name="password2" type="password" placeholder="Repetir contraseña" required
+        class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+
+      <button class="w-full bg-yellow-400 text-stone-900 font-semibold px-4 py-2 rounded-xl">
+        Guardar
+      </button>
     </form>
   </div>
+
+  <!-- Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/sw.js")
+        .then(() => console.log("✅ PWA activa (reset)"))
+        .catch(err => console.error("❌ SW error", err));
+    }
+  </script>
+
 </body>
 </html>
 """
+
 
 @app.route("/reset", methods=["GET","POST"])
 def reset():
@@ -480,6 +620,15 @@ BASE_SHELL = """
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
 <title>{{ brand }} — {{ title or '' }}</title>
 
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+<!-- ===== /PWA ===== -->
+
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -491,12 +640,10 @@ input[type="date"]{
   padding: 10px 12px;
   font-weight: 600;
 }
-
 input[type="date"]::-webkit-calendar-picker-indicator{
   filter: invert(0);
   cursor: pointer;
 }
-
 input[type="date"]:focus{
   outline: none;
   box-shadow: 0 0 0 3px rgba(250,204,21,.35);
@@ -544,7 +691,6 @@ header{
   font-size:15px;
   transition:.25s;
 }
-
 .nav a.active,
 .nav a:hover{
   background:rgba(0,0,0,.25);
@@ -564,14 +710,6 @@ header{
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.1),
     0 30px 60px rgba(0,0,0,.55);
-}
-
-/* ===================== METRIC CARDS ===================== */
-.metric{
-  transition:.25s;
-}
-.metric:hover{
-  transform:translateY(-4px) scale(1.01);
 }
 
 /* ===================== BUTTONS ===================== */
@@ -602,12 +740,6 @@ tbody tr{
   background:rgba(0,0,0,.35);
   border-radius:18px;
 }
-tbody td:first-child{
-  border-radius:18px 0 0 18px;
-}
-tbody td:last-child{
-  border-radius:0 18px 18px 0;
-}
 
 /* ===================== EMPENO CARD ===================== */
 .empeno-ficha{
@@ -617,33 +749,8 @@ tbody td:last-child{
   border:1px solid rgba(250,204,21,.4);
   box-shadow:0 20px 40px rgba(0,0,0,.6);
 }
-.ficha-header{
-  display:flex;
-  justify-content:space-between;
-  font-weight:800;
-  color:var(--gold);
-}
-.ficha-actions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:10px;
-}
-.ficha-actions a{
-  padding:8px 14px;
-  border-radius:14px;
-  background:#020617;
-  border:1px solid var(--gold);
-  font-weight:700;
-}
 
-/* ===================== STATUS ===================== */
-.estado.activo{color:#22c55e;font-weight:800}
-.estado.vencido{color:#ef4444;font-weight:800}
-.estado.retirado{color:#3b82f6;font-weight:800}
-.estado.ejecutado{color:#f97316;font-weight:800}
-
-/* ===================== iPHONE TOUCH ===================== */
+/* ===================== TOUCH ===================== */
 *{ -webkit-tap-highlight-color:transparent; }
 
 footer{
@@ -655,15 +762,21 @@ footer{
 
 <body>
 
-<header>
-  <div class="max-w-7xl mx-auto px-4 py-6">
-    <div class="flex flex-col items-center gap-3">
-      <div class="flex items-center gap-4">
-        <div class="app-logo">💎</div>
-        <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight">
-          {{ brand }}
-        </h1>
-      </div>
+<div class="flex items-center justify-between w-full max-w-3xl">
+  
+  <!-- Diamante izquierdo -->
+  <div class="app-logo">💎</div>
+
+  <!-- Título centrado -->
+  <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight text-center flex-1">
+    {{ brand }}
+  </h1>
+
+  <!-- Diamante derecho -->
+  <div class="app-logo">💎</div>
+
+</div>
+
 
       <nav class="nav flex flex-wrap gap-2 justify-center">
         <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">Inicio</a>
@@ -688,9 +801,19 @@ footer{
   © {{ now.year if now else '' }} {{ brand }}
 </footer>
 
+<!-- ===== Service Worker ===== -->
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js")
+      .then(() => console.log("✅ PWA activa (base)"))
+      .catch(err => console.error("❌ SW error", err));
+  }
+</script>
+
 </body>
 </html>
 """
+
 
 
 def render_page(body_html, title="", active=""):
@@ -937,21 +1060,24 @@ def clients_delete(client_id:int):
         conn.commit()
     return redirect(url_for("clients"))
 
-# ==============================
-# UI GLOBAL — iPHONE + GLASS MODE
-# ==============================
+<!-- ==============================
+     iPHONE + GLASS + PWA
+================================ -->
 
-GLOBAL_IOS_STYLE = """
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="theme-color" content="#facc15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="World Jewelry">
+
 <style>
-
-/* ===== BASE iPHONE ===== */
 body {
   background: linear-gradient(180deg, #0b0b0b, #111);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
   font-size: 15px;
 }
 
-/* ===== GLASS ===== */
 .glass {
   background: rgba(20,20,20,0.55);
   backdrop-filter: blur(14px);
@@ -960,7 +1086,6 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
 }
 
-/* ===== BOTONES GRANDES ===== */
 button, a.btn, .btn {
   min-height: 48px;
   padding: 12px 18px;
@@ -973,21 +1098,18 @@ button, a.btn, .btn {
   gap: 6px;
 }
 
-/* ===== BOTÓN PRINCIPAL ===== */
 .gold-gradient {
   background: linear-gradient(135deg, #facc15, #f59e0b);
   color: #000;
   border: none;
 }
 
-/* ===== INPUTS iOS ===== */
 input, select, textarea {
   min-height: 48px;
   border-radius: 14px;
   font-size: 16px;
 }
 
-/* ===== FICHAS DE EMPEÑO ===== */
 .empeno-ficha {
   background: rgba(0,0,0,0.35);
   border-radius: 18px;
@@ -995,7 +1117,6 @@ input, select, textarea {
   margin-bottom: 12px;
 }
 
-/* ===== ACCIONES ===== */
 .ficha-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1013,12 +1134,6 @@ input, select, textarea {
   font-weight: 700;
 }
 
-/* ===== HEADER ===== */
-h2, h3 {
-  letter-spacing: .3px;
-}
-
-/* ===== TABLAS -> TARJETAS ===== */
 @media (max-width: 768px) {
   table { display: block; }
   thead { display: none; }
@@ -1035,13 +1150,14 @@ h2, h3 {
   }
 }
 
-/* ===== SAFE TOUCH ===== */
 a, button {
   touch-action: manipulation;
 }
-
 </style>
-"""
+
+<!-- ==============================
+     /iPHONE + GLASS + PWA
+================================ -->
 
 
 LOANS_LIST_TPL = """
@@ -2040,7 +2156,6 @@ def loan_ticket(loan_id: int):
         <span>Monto entregado</span>
         <strong>$ {r['monto_entregado']:.2f}</strong>
       </div>
-      <div class="row"><span>Interés</span><strong>{r['interest_rate']}%</strong></div>
       <div class="row"><span>Vence</span><strong>{r['due_date']}</strong></div>
 
       <hr>
@@ -4504,6 +4619,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
