@@ -980,7 +980,7 @@ def dashboard():
     caja_color = "green" if caja >= 0 else "red"
 
     # ================== BODY ==================
-    body = f"""
+    body = f'''
 <div class="space-y-10">
 
   <!-- BOTÓN FACTURACIÓN -->
@@ -995,21 +995,18 @@ def dashboard():
   <!-- MÉTRICAS iOS -->
   <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <!-- Empeños activos -->
     <div class="ios-card" onclick="haptic('tap')">
       <div class="ios-glow music-wave gold"></div>
       <div class="ios-label">Empeños activos</div>
       <div class="ios-value" data-count="{activos}">0</div>
     </div>
 
-    <!-- Capital activo -->
     <div class="ios-card green" onclick="haptic('tap')">
       <div class="ios-glow music-wave green"></div>
       <div class="ios-label">Capital activo</div>
       <div class="ios-value" data-count="{capital_prestado:.2f}">0</div>
     </div>
 
-    <!-- Caja -->
     <div class="ios-card {caja_color}" onclick="haptic('tap')">
       <div class="ios-glow music-wave {caja_color}"></div>
       <div class="ios-label">Caja de hoy</div>
@@ -1057,8 +1054,7 @@ document.querySelectorAll('.music-wave').forEach(w=>{
   },60);
 });
 </script>
-"""
-
+'''
     return render_page(body, title="Dashboard", active="dashboard")
 
 @app.route("/clientes/nuevo", methods=["POST"])
@@ -4674,6 +4670,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
