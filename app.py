@@ -766,7 +766,6 @@ footer{
 
     <!-- LOGO + TITULO -->
     <div class="flex items-center justify-between gap-4 mb-4">
-
       <div class="app-logo">💎</div>
 
       <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight text-center flex-1">
@@ -774,7 +773,6 @@ footer{
       </h1>
 
       <div class="app-logo">💎</div>
-
     </div>
 
     <!-- NAV -->
@@ -812,6 +810,7 @@ if ("serviceWorker" in navigator) {
 </body>
 </html>
 """
+
 
 
       <nav class="nav flex flex-wrap gap-2 justify-center">
@@ -4658,6 +4657,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
