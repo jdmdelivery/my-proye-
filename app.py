@@ -1299,9 +1299,7 @@ button, a.btn, .btn {
   margin-bottom: 12px;
 }
 
-/* =================================================
-   DASHBOARD iOS CARDS (AQUÍ VA TU BLOQUE)
-================================================= */
+/* ===== DASHBOARD iOS CARDS ===== */
 .ios-card{
   position:relative;
   padding:26px;
@@ -1352,6 +1350,7 @@ button, a.btn, .btn {
   100%{transform:translate(0,0)}
 }
 </style>
+"""
 
 
 
@@ -4661,6 +4660,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
