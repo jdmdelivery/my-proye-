@@ -650,18 +650,37 @@ BASE_SHELL = """
 <!-- ===== PWA ===== -->
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-<meta name="theme-color" content="#facc15">
+<meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="World Jewelry">
+<meta name="apple-mobile-web-app-title" content="{{ brand }}">
 <!-- ===== /PWA ===== -->
 
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
+/* =====================================================
+   iPHONE SAFE WIDTH — NADA SE SALE DE LA PANTALLA
+===================================================== */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+header, main, footer {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ================= INPUT DATE ================= */
 input[type="date"]{
-  background-color: rgba(255,255,255,0.95) !important;
-  color:#111827 !important;
+  background-color: rgba(255,255,255,0.95)!important;
+  color:#111827!important;
   border-radius:12px;
   padding:10px 12px;
   font-weight:600;
@@ -671,6 +690,7 @@ input[type="date"]:focus{
   box-shadow:0 0 0 3px rgba(250,204,21,.35);
 }
 
+/* ================= THEME ================= */
 :root{
   --gold:#facc15;
   --gold-dark:#d97706;
@@ -685,6 +705,7 @@ html,body{
   -webkit-font-smoothing:antialiased;
 }
 
+/* ================= HEADER ================= */
 header{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   box-shadow:0 20px 40px rgba(0,0,0,.45);
@@ -701,6 +722,7 @@ header{
   font-size:28px;
 }
 
+/* ================= NAV ================= */
 .nav a{
   padding:10px 16px;
   border-radius:16px;
@@ -712,20 +734,82 @@ header{
   color:#fff;
 }
 
+/* ================= GLASS ================= */
 .glass{
-  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03));
+  background:linear-gradient(
+    180deg,
+    rgba(255,255,255,.12),
+    rgba(255,255,255,.03)
+  );
   backdrop-filter:blur(18px);
   border-radius:22px;
   border:1px solid rgba(255,255,255,.12);
+  max-width:100%;
 }
 
+/* ================= CARDS ================= */
 .empeno-ficha{
   background:linear-gradient(135deg,#020617,#020617cc);
   border-radius:20px;
   padding:16px;
   border:1px solid rgba(250,204,21,.4);
+  max-width:100%;
 }
 
+/* ================= TABLES iPHONE MODE ================= */
+table{
+  width:100%;
+  max-width:100%;
+  display:block;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+@media (max-width:768px){
+  table, thead, tbody, tr, td, th{
+    display:block;
+    width:100%;
+  }
+  thead{ display:none; }
+  tr{
+    margin-bottom:16px;
+    background:rgba(0,0,0,.35);
+    border-radius:18px;
+    padding:12px;
+  }
+  td{
+    padding:6px 0;
+    word-break:break-word;
+  }
+}
+
+/* ================= INPUTS / FILES / IMAGES ================= */
+input, select, textarea, button {
+  max-width:100%;
+}
+
+input[type="file"]{
+  width:100%;
+}
+
+img{
+  max-width:100%;
+  height:auto;
+  border-radius:12px;
+}
+
+/* ================= BUTTONS ================= */
+button,.btn{
+  min-height:48px;
+  padding:14px 18px;
+  border-radius:16px;
+  font-size:16px;
+  font-weight:700;
+  transition:.15s;
+}
+button:active{ transform:scale(.96); }
+
+/* ================= TOUCH ================= */
 *{ -webkit-tap-highlight-color:transparent; }
 
 footer{
@@ -784,6 +868,7 @@ if ("serviceWorker" in navigator) {
 </body>
 </html>
 """
+
 
 
 def render_page(body_html, title="", active=""):
@@ -4593,6 +4678,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
