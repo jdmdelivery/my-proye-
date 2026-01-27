@@ -1557,12 +1557,12 @@ def empenos_nuevo():
 
         now_time = datetime.now().strftime("%H:%M:%S")
 
-        # ===== DATOS DEL CLIENTE =====
+        # DATOS CLIENTE
         customer_name = request.form.get("customer_name", "").strip()
         customer_id   = request.form.get("customer_id", "").strip()
         phone         = request.form.get("phone", "").strip()
 
-        # ===== DATOS DEL ARTÍCULO =====
+        # DATOS ARTÍCULO
         item_name    = request.form.get("item_name", "").strip()
         weight_grams = float(request.form.get("weight_grams", 0) or 0)
         amount       = float(request.form.get("amount", 0) or 0)
@@ -1574,22 +1574,20 @@ def empenos_nuevo():
             ) or 20
         )
 
-        # ===== FECHA DE INICIO =====
         start_date = request.form.get("start_date")
 
-        # ===== VALIDACIONES =====
+        # VALIDACIONES
         missing = []
         if not customer_name: missing.append("Nombre del cliente")
         if not customer_id:   missing.append("ID del cliente")
         if not phone:         missing.append("Teléfono")
         if not item_name:     missing.append("Artículo")
         if amount <= 0:       missing.append("Monto")
-        if not start_date:    missing.append("Fecha inicio del empeño")
+        if not start_date:    missing.append("Fecha inicio")
 
         if missing:
             return "Faltan campos: " + ", ".join(missing), 400
 
-        # ===== FECHAS =====
         created_at = f"{start_date} {now_time}"
 
         term_days = int(get_setting("default_term_days", "90"))
@@ -1598,64 +1596,52 @@ def empenos_nuevo():
             timedelta(days=term_days)
         ).strftime("%Y-%m-%d")
 
-        # ===== FOTO =====
+        # FOTO
         photo_path = ""
         file = request.files.get("photo")
         if file and file.filename:
             fname = f"{int(time.time())}_" + secure_filename(file.filename)
-            disk_path = UPLOAD_DIR / fname
-            file.save(str(disk_path))
+            file.save(UPLOAD_DIR / fname)
             photo_path = "/uploads/" + fname
 
-       # ===== GUARDAR EN BD =====
-with closing(get_db()) as conn:
+        # GUARDAR EN BD
+        with closing(get_db()) as conn:
 
-    conn.execute("""
-        INSERT INTO loans (
-            created_at,
-            item_name,
-            weight_grams,
-            customer_name,
-            customer_id,
-            phone,
-            amount,
-            interest_rate,
-            due_date,
-            photo_path
-        )
-        VALUES (?,?,?,?,?,?,?,?,?,?)
-    """, (
-        created_at,
-        item_name,
-        weight_grams,
-        customer_name,
-        customer_id,
-        phone,
-        amount,
-        interest_rate,
-        due_date,
-        photo_path
-    ))
+            conn.execute("""
+                INSERT INTO loans (
+                    created_at, item_name, weight_grams,
+                    customer_name, customer_id, phone,
+                    amount, interest_rate, due_date, photo_path
+                )
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            """, (
+                created_at,
+                item_name,
+                weight_grams,
+                customer_name,
+                customer_id,
+                phone,
+                amount,
+                interest_rate,
+                due_date,
+                photo_path
+            ))
 
-    conn.execute("""
-        INSERT INTO cash_movements (
-            when_at,
-            concept,
-            amount,
-            ref
-        )
-        VALUES (?,?,?,?)
-    """, (
-        created_at,
-        f"Desembolso empeño {customer_name}",
-        -amount,
-        "LOAN"
-    ))
+            conn.execute("""
+                INSERT INTO cash_movements (
+                    when_at, concept, amount, ref
+                )
+                VALUES (?,?,?,?)
+            """, (
+                created_at,
+                f"Desembolso empeño {customer_name}",
+                -amount,
+                "LOAN"
+            ))
 
-    conn.commit()
+            conn.commit()
 
-return redirect(url_for("empenos_index"))
-
+        return redirect(url_for("empenos_index"))
 
     # =========================
     # GET → FORMULARIO
@@ -1665,133 +1651,29 @@ return redirect(url_for("empenos_index"))
 
     body = '''
     <div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
-      <h2 class="text-xl font-bold text-yellow-300 mb-4">
-        Nuevo Empeño
-      </h2>
+      <h2 class="text-xl font-bold mb-4">Nuevo Empeño</h2>
 
       <form method="post" enctype="multipart/form-data" class="space-y-4">
 
-        <input name="customer_name" placeholder="Nombre del cliente" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+        <input name="customer_name" placeholder="Nombre del cliente" required class="w-full p-2"/>
+        <input name="customer_id" placeholder="ID del cliente" required class="w-full p-2"/>
+        <input name="phone" placeholder="Teléfono" required class="w-full p-2"/>
+        <input name="item_name" placeholder="Artículo" required class="w-full p-2"/>
+        <input name="weight_grams" type="number" step="0.01" placeholder="Peso (g)" class="w-full p-2"/>
+        <input name="amount" type="number" step="0.01" required placeholder="Monto" class="w-full p-2"/>
+        <input name="interest_rate" type="number" step="0.01" value="{rate}" class="w-full p-2"/>
+        <input name="start_date" type="date" value="{today}" class="w-full p-2"/>
+        <input name="photo" type="file" accept="image/*" class="w-full p-2"/>
 
-        <input name="customer_id" placeholder="ID del cliente" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="phone" placeholder="Teléfono" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="item_name" placeholder="Artículo" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="weight_grams" type="number" step="0.01"
-          placeholder="Peso (g)"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="amount" type="number" step="0.01" required
-          placeholder="Monto entregado"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="interest_rate" type="number" step="0.01"
-          value="{rate}"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="start_date" type="date" value="{today}"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <input name="photo" type="file" accept="image/*"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-        <div class="flex gap-2 pt-4">
-          <button class="gold-gradient px-6 py-3 rounded-xl font-extrabold">
-            Guardar empeño
-          </button>
-          <a href="/empenos"
-             class="px-6 py-3 rounded-xl border border-yellow-200/30">
-            Cancelar
-          </a>
-        </div>
+        <button class="gold-gradient px-6 py-3 rounded-xl">Guardar empeño</button>
+        <a href="/empenos">Cancelar</a>
 
       </form>
     </div>
-    '''.format(
-        today=today,
-        rate=f"{default_rate:.2f}"
-    )
+    '''.format(today=today, rate=f"{default_rate:.2f}")
 
     return render_page(body, title="Nuevo empeño", active="loans")
 
-
-
-# =========================
-# GET → FORMULARIO
-# =========================
-today = date.today().isoformat()
-default_rate = float(get_setting("default_interest_rate", "20"))
-
-body = '''
-<div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
-  <h2 class="text-xl font-bold text-yellow-300 mb-4">
-    ➕ Nuevo Empeño
-  </h2>
-
-  <form method="post" enctype="multipart/form-data" class="space-y-4">
-
-    <input name="customer_name" placeholder="Nombre del cliente" required
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="customer_id" placeholder="ID del cliente" required
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="phone" placeholder="Teléfono" required
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="item_name" placeholder="Artículo" required
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="weight_grams" type="number" step="0.01"
-      placeholder="Peso (g)"
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="amount" type="number" step="0.01" required
-      placeholder="Monto entregado"
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <input name="interest_rate" type="number" step="0.01"
-      value="{rate}"
-      placeholder="Interés mensual (%)"
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <label class="text-sm text-yellow-200">
-      Fecha de inicio del empeño
-    </label>
-    <input name="start_date" type="date" required
-      value="{today}"
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <label class="text-sm text-yellow-200">
-      Foto del artículo
-    </label>
-    <input name="photo" type="file" accept="image/*"
-      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
-
-    <div class="flex gap-2 pt-4">
-      <button class="gold-gradient px-6 py-3 rounded-xl font-extrabold">
-        Guardar empeño
-      </button>
-      <a href="/empenos"
-         class="px-6 py-3 rounded-xl border border-yellow-200/30">
-        Cancelar
-      </a>
-    </div>
-
-  </form>
-</div>
-'''.format(
-    today=today,
-    rate=f"{default_rate:.2f}"
-)
-
-return render_page(body, title="Nuevo empeño", active="loans")
 
 
 # ====== Editar Empeño ======
@@ -4778,6 +4660,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
