@@ -951,30 +951,24 @@ def dashboard():
     # ================== TARJETAS DE VENCIMIENTO ==================
     fichas = ""
     for r in upcoming:
-        fichas += """
+        fichas += f"""
         <div class="glass-card hover-lift" onclick="haptic('tap')">
           <div class="flex justify-between items-center mb-2">
             <div class="font-extrabold text-yellow-300">
-              💎 #{id} • {customer}
+              💎 #{r['id']} • {r['customer_name']}
             </div>
             <div class="text-xs opacity-70">
-              📅 {due}
+              📅 {r['due_date']}
             </div>
           </div>
           <div class="text-sm opacity-90">
-            <b>Artículo:</b> {item}
+            <b>Artículo:</b> {r['item_name']}
           </div>
           <div class="text-xl font-extrabold mt-2 text-yellow-200">
-            ${amount}
+            ${r['amount']:,.2f}
           </div>
         </div>
-        """.format(
-            id=r["id"],
-            customer=r["customer_name"],
-            due=r["due_date"],
-            item=r["item_name"],
-            amount=f"{r['amount']:,.2f}"
-        )
+        """
 
     if not fichas:
         fichas = """
@@ -986,9 +980,8 @@ def dashboard():
     caja_color = "emerald" if caja >= 0 else "rose"
 
     # ================== BODY ==================
-body = f"""
+    body = f"""
 <style>
-/* ===== DASHBOARD PREMIUM ===== */
 .gold-gradient {{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   color:#020617;
@@ -1028,36 +1021,25 @@ body = f"""
 
 <div class="space-y-10">
 
-  <!-- BOTÓN FACTURACIÓN -->
-  <div class="flex justify-end">
-    <a href="{{{{ url_for('facturacion') }}}}"
-       onclick="haptic('nav')"
-       class="gold-gradient px-6 py-3 rounded-2xl font-extrabold shadow-xl">
-       🧾 Facturación
-    </a>
-  </div>
-
-  <!-- MÉTRICAS PRINCIPALES -->
   <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <div class="glass-card metric" onclick="haptic('tap')">
+    <div class="glass-card metric">
       <div class="text-sm opacity-80">Empeños activos</div>
       <div class="metric-value badge-green" data-count="{activos}">0</div>
     </div>
 
-    <div class="glass-card metric" onclick="haptic('tap')">
+    <div class="glass-card metric">
       <div class="text-sm opacity-80">Capital en custodia</div>
-      <div class="metric-value badge-emerald" data-count="{capital}">0</div>
+      <div class="metric-value badge-emerald" data-count="{capital_prestado}">0</div>
     </div>
 
-    <div class="glass-card metric" onclick="haptic('tap')">
+    <div class="glass-card metric">
       <div class="text-sm opacity-80">Caja del día</div>
       <div class="metric-value badge-{caja_color}" data-count="{caja}">0</div>
     </div>
 
   </section>
 
-  <!-- VENCIMIENTOS -->
   <section class="glass-card">
     <h2 class="text-xl font-extrabold text-yellow-300 mb-5">
       ⏰ Vencimientos próximos (7 días)
@@ -1068,6 +1050,30 @@ body = f"""
   </section>
 
 </div>
+
+<script>
+document.querySelectorAll('[data-count]').forEach(el => {{
+  const target = parseFloat(el.dataset.count);
+  let val = 0;
+  const step = target / 35;
+
+  function animate() {{
+    val += step;
+    if (val >= target) val = target;
+    el.textContent = Number.isInteger(target)
+      ? Math.round(val)
+      : '$' + val.toLocaleString(undefined, {{
+          minimumFractionDigits:2,
+          maximumFractionDigits:2
+        }});
+    if (val < target) requestAnimationFrame(animate);
+  }}
+  animate();
+}});
+</script>
+"""
+
+    return render_page(body, title="Dashboard", active="dashboard")
 
 <script>
 /* ===== ANIMACIÓN DE NÚMEROS ===== */
