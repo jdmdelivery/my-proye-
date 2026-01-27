@@ -1103,6 +1103,7 @@ LOANS_LIST_TPL = """
   </div>
 </section>
 """
+
 IOS_PWA_STYLE = """
 <!-- ==============================
      iPHONE + GLASS + PWA
@@ -4565,6 +4566,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
