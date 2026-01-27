@@ -659,329 +659,154 @@ BASE_SHELL = """
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* =====================================================
-   iOS / iPhone UI BASE + LISTA EMPENOS TIPO APPLE WALLET
-   1 línea → expandir | Swipe left | Modal iOS | Haptic
-===================================================== */
-
-/* SAFE WIDTH */
 html,body{width:100%;max-width:100%;overflow-x:hidden}
-header,main,footer{max-width:100vw;overflow-x:hidden}
-*,*:before,*:after{box-sizing:border-box}
-img,video,canvas,svg{max-width:100%;height:auto}
+*{-webkit-tap-highlight-color:transparent}
 
-/* THEME */
 :root{
   --gold:#facc15;
-  --gold-dark:#d97706;
   --danger:#ff3b30;
   --ok:#34c759;
-  --stroke:rgba(255,255,255,.12);
 }
 
-/* BACKGROUND */
+/* ===== BACKGROUND ===== */
 html,body{
   background:
     radial-gradient(1200px 600px at 10% -10%, #1e293b 0%, transparent 60%),
     radial-gradient(900px 500px at 90% 10%, #0f172a 0%, transparent 60%),
     linear-gradient(180deg,#020617,#000);
   color:#e5e7eb;
-  -webkit-font-smoothing:antialiased;
 }
 
-/* HEADER */
+/* ===== HEADER ===== */
 header{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   box-shadow:0 20px 40px rgba(0,0,0,.45);
 }
 .app-logo{
-  height:56px;width:56px;
-  border-radius:18px;
+  height:56px;width:56px;border-radius:18px;
   background:#020617;
   display:flex;align-items:center;justify-content:center;
   font-size:28px;
 }
 
-/* BUTTONS */
-.btn{
-  min-height:46px;
-  padding:12px 16px;
-  border-radius:16px;
-  font-weight:800;
-}
-.btn-danger{background:rgba(255,59,48,.2);border:1px solid rgba(255,59,48,.4)}
-.btn-ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)}
-
-/* WALLET LIST */
-.wallet-row{
-  position:relative;
-  overflow:hidden;
-  border-radius:22px;
-  border:1px solid rgba(250,204,21,.35);
-  background:linear-gradient(135deg,rgba(2,6,23,.96),rgba(2,6,23,.78));
-  box-shadow:0 18px 40px rgba(0,0,0,.55);
-}
-.wallet-front{transition:transform .18s ease}
-.wallet-header{
-  padding:14px;
-  display:flex;
-  justify-content:space-between;
-  cursor:pointer;
-  font-weight:900;
-}
-.wallet-details{
-  max-height:0;
-  overflow:hidden;
-  transition:max-height .28s cubic-bezier(.2,.8,.2,1);
-}
-.wallet-row.open .wallet-details{max-height:520px}
-
-/* FLOAT BUTTON */
-.fab-new{
-  position:fixed;
-  bottom:26px;
-  right:22px;
-  width:64px;
-  height:64px;
-  border-radius:22px;
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:white;
-  font-size:34px;
-  font-weight:900;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 20px 40px rgba(0,0,0,.45);
-  z-index:999;
-}
-.fab-new:active{transform:scale(.92)}
-
-/* MODAL iOS */
-.modal-backdrop{
+/* ===== MENU GLASS ===== */
+.menu-backdrop{
   position:fixed;inset:0;
   background:rgba(0,0,0,.55);
-  backdrop-filter:blur(10px);
+  backdrop-filter:blur(14px);
   display:none;
-  align-items:flex-end;
-  justify-content:center;
-  padding:16px;
-  z-index:80;
+  z-index:999;
 }
-.modal-backdrop.show{display:flex}
-.modal-sheet{
-  width:min(520px,100%);
-  border-radius:26px;
-  background:linear-gradient(180deg,rgba(30,41,59,.92),rgba(2,6,23,.92));
-  box-shadow:0 30px 70px rgba(0,0,0,.65);
-  overflow:hidden;
+.menu-backdrop.show{display:block}
+
+.menu-panel{
+  position:absolute;
+  top:20px;right:16px;
+  width:min(90%,360px);
+  background:linear-gradient(180deg,rgba(30,41,59,.95),rgba(2,6,23,.95));
+  border-radius:28px;
+  padding:16px;
+  box-shadow:0 30px 80px rgba(0,0,0,.7);
 }
 
-/* TOUCH */
-*{-webkit-tap-highlight-color:transparent}
+.menu-item{
+  display:flex;align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:18px;
+  font-weight:900;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  margin-bottom:8px;
+  transition:.18s;
+}
+.menu-item:active{transform:scale(.96)}
+.menu-danger{color:#ffb4b0}
 </style>
 </head>
 
 <body>
 
 <header class="px-4 py-6">
-  <div class="flex items-center justify-between mb-4">
+  <div class="flex items-center justify-between">
     <div class="app-logo">💎</div>
-    <h1 class="text-3xl font-extrabold text-black text-center flex-1">{{ brand }}</h1>
-    <div class="app-logo">💎</div>
-  </div>
 
-  <nav class="grid grid-cols-3 gap-4 bg-black/30 p-4 rounded-3xl">
-    <a href="{{ url_for('dashboard') }}">🏠 Inicio</a>
-    <a href="{{ url_for('empenos_index') }}">💍 Empeños</a>
-    <a href="{{ url_for('cash') }}">💵 Caja</a>
-    <a href="{{ url_for('reports') }}">📊 Reportes</a>
-    <a href="{{ url_for('inventory') }}">📦 Inventario</a>
-    <a href="{{ url_for('sales_page') }}">🧾 Ventas</a>
-    <a href="{{ url_for('users_page') }}">👤 Usuarios</a>
-    <a href="{{ url_for('settings_page') }}">⚙️ Config</a>
-    <a href="{{ url_for('logout') }}">🚪 Salir</a>
-  </nav>
+    <h1 class="text-3xl font-extrabold text-black text-center flex-1">
+      {{ brand }}
+    </h1>
+
+    <!-- BOTÓN ÚNICO -->
+    <button id="menuBtn"
+      class="w-12 h-12 rounded-2xl bg-black/80 text-white text-2xl font-black flex items-center justify-center">
+      ☰
+    </button>
+  </div>
 </header>
+
+<!-- ===== iOS GLASS MENU ===== -->
+<div id="menuBackdrop" class="menu-backdrop">
+  <div class="menu-panel">
+    <a class="menu-item" href="{{ url_for('dashboard') }}">🏠 Inicio</a>
+    <a class="menu-item" href="{{ url_for('empenos_index') }}">💍 Empeños</a>
+    <a class="menu-item" href="{{ url_for('cash') }}">💵 Caja</a>
+    <a class="menu-item" href="{{ url_for('reports') }}">📊 Reportes</a>
+    <a class="menu-item" href="{{ url_for('inventory') }}">📦 Inventario</a>
+    <a class="menu-item" href="{{ url_for('sales_page') }}">🧾 Ventas</a>
+    <a class="menu-item" href="{{ url_for('users_page') }}">👤 Usuarios</a>
+    <a class="menu-item" href="{{ url_for('settings_page') }}">⚙️ Config</a>
+
+    <div class="h-px bg-white/10 my-2"></div>
+
+    <a class="menu-item menu-danger" href="{{ url_for('logout') }}">🚪 Salir</a>
+  </div>
+</div>
 
 <main class="px-4 py-6">
   {{ body|safe }}
 </main>
 
-<a href="{{ url_for('empenos_index') }}" class="fab-new">＋</a>
-
-<!-- MODAL -->
-<div id="iosModal" class="modal-backdrop">
-  <div class="modal-sheet p-4">
-    <h3 id="modalTitle" class="font-extrabold">¿Eliminar?</h3>
-    <p id="modalMsg" class="opacity-80 text-sm mt-1">No se puede deshacer</p>
-    <div class="grid gap-3 mt-4">
-      <button id="modalConfirm" class="btn btn-danger">Eliminar</button>
-      <button id="modalCancel" class="btn btn-ghost">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <script>
-/* HAPTIC */
-function haptic(ms=15){if(navigator.vibrate)navigator.vibrate(ms)}
+/* ===== HAPTIC ENGINE ===== */
+function haptic(type="tap"){
+  if(!navigator.vibrate) return;
+  const patterns={
+    tap:[15],
+    open:[20],
+    nav:[10],
+    success:[20,40,20],
+    danger:[60,20,60],
+    close:[8]
+  };
+  navigator.vibrate(patterns[type]||[10]);
+}
 
-/* WALLET EXPAND */
-document.addEventListener("click",e=>{
-  const h=e.target.closest("[data-wallet-header]");
-  if(h){haptic();h.closest(".wallet-row").classList.toggle("open")}
+/* ===== MENU LOGIC ===== */
+const btn=document.getElementById("menuBtn");
+const back=document.getElementById("menuBackdrop");
+
+btn.onclick=()=>{
+  haptic("open");
+  back.classList.add("show");
+};
+
+back.onclick=(e)=>{
+  if(e.target===back){
+    haptic("close");
+    back.classList.remove("show");
+  }
+};
+
+document.querySelectorAll(".menu-item").forEach(el=>{
+  el.addEventListener("click",()=>{
+    haptic(el.classList.contains("menu-danger")?"danger":"nav");
+  });
 });
-
-/* MODAL */
-const modal=document.getElementById("iosModal");
-const cancel=document.getElementById("modalCancel");
-cancel.onclick=()=>modal.classList.remove("show");
 </script>
 
 </body>
 </html>
 """
-# =========================
-# BODY: EMPENOS (APPLE WALLET LIST)
-# =========================
-EMPENOS_WALLET_TPL = """
-<div class="glass p-4 md:p-6">
-  <div class="flex items-center justify-between gap-3 mb-4">
-    <div>
-      <div class="text-xl font-extrabold" style="color:var(--gold)">Empeños</div>
-      <div class="opacity-75 text-sm">Desliza a la izquierda para eliminar • toca para ver detalles</div>
-    </div>
-    <a class="btn btn-primary" href="{{ url_for('empeno_new') }}">+ Nuevo</a>
-  </div>
 
-  <form class="flex gap-2 mb-4" method="GET" action="{{ url_for('empenos_index') }}">
-    <input class="w-full rounded-2xl px-4 py-3 text-black" name="q" value="{{ q or '' }}"
-           placeholder="Buscar cliente, ID, tel o artículo"/>
-    <button class="btn btn-primary" type="submit">Buscar</button>
-  </form>
-
-  <div class="wallet-list">
-    {% for r in rows %}
-    <div class="wallet-row" data-wallet-row data-swipe data-delete-url="{{ url_for('empeno_delete_api', loan_id=r['id']) }}">
-      <div class="wallet-swipe-bg">
-        <div class="trash">🗑️ Eliminar</div>
-      </div>
-
-      <div class="wallet-front">
-        <!-- 1 LÍNEA -->
-        <div class="wallet-header" data-wallet-header>
-          <div class="wallet-title">
-            <div class="name">{{ r['customer_name'] or 'Cliente' }}</div>
-            <div class="sub">
-              #{{ r['id'] }} • {{ r['item_name'] }} • {{ (r['weight_grams'] or 0) }} g
-            </div>
-          </div>
-
-          <div class="wallet-pill">
-            <span>{{ "USD" if currency=='USD' else "$" }}</span>
-            <span>{{ "%.2f"|format(r['amount'] or 0) }}</span>
-          </div>
-
-          <div class="chev">⌄</div>
-        </div>
-
-        <!-- EXPAND -->
-        <div class="wallet-details">
-          <div class="wallet-details-inner">
-
-            <div class="wallet-meta">
-              <div class="box">
-                <div class="k">Estado</div>
-                <div class="v">{{ r['status'] or 'ACTIVO' }}</div>
-              </div>
-              <div class="box">
-                <div class="k">Interés</div>
-                <div class="v">{{ "%.2f"|format(r['interest_rate'] or 0) }}% / mes</div>
-              </div>
-              <div class="box">
-                <div class="k">Teléfono</div>
-                <div class="v">{{ r['phone'] or '' }}</div>
-              </div>
-              <div class="box">
-                <div class="k">Vence</div>
-                <div class="v">{{ r['due_date'] or '' }}</div>
-              </div>
-            </div>
-
-            <div class="wallet-actions">
-              <a class="btn btn-ghost" href="{{ url_for('ticket_view', loan_id=r['id']) }}">🧾 Recibo</a>
-              <a class="btn btn-ghost" href="{{ url_for('edit_loan_page', loan_id=r['id']) }}">✏️ Editar</a>
-              <a class="btn btn-ok" href="{{ url_for('payment_page', loan_id=r['id']) }}">💵 Pago</a>
-              <a class="btn btn-ghost" href="{{ url_for('empeno_legal_view', loan_id=r['id']) }}">📄 Documento</a>
-
-              <!-- botón eliminar (por si no swipes) -->
-              <button class="btn btn-danger" type="button"
-                onclick="(function(){
-                  haptic('warning');
-                  const row = document.querySelector('[data-delete-url=\\'{{ url_for('empeno_delete_api', loan_id=r['id']) }}\\']');
-                  if(!row) return;
-                  const front = row.querySelector('.wallet-front');
-                  if(front) front.style.transform='translateX(-140px)';
-                  openModal({
-                    title:'Eliminar empeño',
-                    msg:'¿Seguro? No se puede deshacer.',
-                    onConfirm: async ()=>{
-                      const r = await fetch('{{ url_for('empeno_delete_api', loan_id=r['id']) }}', {method:'POST', headers:{'X-Requested-With':'fetch'}});
-                      const data = await r.json().catch(()=>({ok:false}));
-                      if(data.ok){
-                        haptic('success');
-                        row.style.opacity='0';
-                        row.style.transform='scale(.98)';
-                        setTimeout(()=>row.remove(),220);
-                      }else{
-                        haptic('error');
-                        if(front) front.style.transform='translateX(0px)';
-                        alert(data.error || 'No se pudo eliminar.');
-                      }
-                    }
-                  });
-                })();">
-                🗑️ Eliminar
-              </button>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-    {% else %}
-      <div class="glass p-6 text-center opacity-80">No hay empeños.</div>
-    {% endfor %}
-  </div>
-</div>
-
-<!-- Floating + -->
-<a class="fab" href="{{ url_for('empeno_new') }}" aria-label="Nuevo empeño">+</a>
-"""
-
-# =========================
-# BACKEND: DELETE API (SWIPE)
-# =========================
-@app.route("/empenos/<int:loan_id>/delete_api", methods=["POST"])
-@login_required
-def empeno_delete_api(loan_id: int):
-    from contextlib import closing
-
-    # (opcional) solo admin:
-    # if session.get("role") != "admin":
-    #     return jsonify({"ok": False, "error": "Acceso denegado"}), 403
-
-    try:
-        with closing(get_db()) as conn:
-            row = conn.execute("SELECT id FROM loans WHERE id=?", (loan_id,)).fetchone()
-            if not row:
-                return jsonify({"ok": False, "error": "No encontrado"}), 404
-
-            conn.execute("DELETE FROM loans WHERE id=?", (loan_id,))
-            conn.commit()
-
-        return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # =========================
@@ -1236,25 +1061,23 @@ def clients_delete(client_id:int):
 
 
 LOANS_LIST_TPL = """
-<!-- ================= LISTA DE EMPEÑOS ================= -->
-<section class="lg:col-span-2 glass rounded-2xl p-4">
+<section class="space-y-4">
 
-  <!-- HEADER + BUSCADOR -->
+  <!-- HEADER -->
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
     <h2 class="text-lg font-bold text-yellow-300">Empeños</h2>
 
     <a href="/empenos/nuevo"
-       class="gold-gradient px-4 py-2 rounded-xl font-bold">
+       class="gold-gradient px-4 py-2 rounded-xl font-bold text-center">
        ➕ Nuevo empeño
     </a>
 
-    <!-- 🔍 BARRA DE BÚSQUEDA -->
     <form method="get" class="flex gap-2">
       <input
         name="q"
         value="{{ q or '' }}"
         placeholder="Buscar cliente, ID, tel o artículo"
-        class="w-64 rounded-xl border border-yellow-200/30 bg-black/40 p-2 text-sm"
+        class="w-full md:w-64 rounded-xl border border-yellow-200/30 bg-black/40 p-2 text-sm"
       />
       <button
         class="px-4 py-2 rounded-xl bg-yellow-400 text-stone-900 font-semibold text-sm">
@@ -1263,73 +1086,85 @@ LOANS_LIST_TPL = """
     </form>
   </div>
 
-  <div class="overflow-auto rounded-xl border border-yellow-200/30">
-    <table class="min-w-full text-sm">
-      <tbody class="divide-y divide-stone-800/40 bg-black/40">
+  {% for r in rows %}
+  {% set monthly_amt = (r.amount or 0) * ((r.interest_rate or 20) / 100) %}
 
-      {% for r in rows %}
-      {% set monthly_amt = (r.amount or 0) * ((r.interest_rate or 20) / 100) %}
+  <!-- CARD -->
+  <div class="glass rounded-2xl p-4">
 
-      <tr>
-        <td colspan="9" class="p-3">
+    <div class="flex justify-between items-start gap-3">
+      <div>
+        <div class="text-lg font-extrabold">
+          {{ r.customer_name }}
+        </div>
 
-          <div class="empeno-ficha">
+        <div class="text-sm opacity-80">
+          Empeño #{{ r.id }} · {{ r.item_name }}
+          {% if r.weight_grams %}
+            ({{ "%.2f"|format(r.weight_grams) }} g)
+          {% endif %}
+        </div>
 
-            <div class="ficha-header">
-              <div>#{{ r.id }}</div>
-              <div>{{ r.created_at[:10] }}</div>
-            </div>
+        <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold
+          {% if r.status == 'ACTIVO' %}
+            bg-green-500/20 text-green-300
+          {% else %}
+            bg-red-500/20 text-red-300
+          {% endif %}
+        ">
+          {{ r.status }}
+        </span>
+      </div>
 
-            <div class="ficha-line">
-              <b>Artículo:</b> {{ r.item_name }}
-              {% if r.weight_grams %}
-                - {{ "%.2f"|format(r.weight_grams) }} g
-              {% endif %}
-            </div>
+      <div class="text-right">
+        <div class="text-xl font-extrabold text-yellow-300">
+          ${{ "%.2f"|format(r.amount or 0) }}
+        </div>
+        <div class="text-xs opacity-70">
+          ${{ "%.2f"|format(monthly_amt) }} / mes
+        </div>
+      </div>
+    </div>
 
-            <div class="ficha-line">
-              <b>Cliente:</b> {{ r.customer_name }}
-            </div>
+    <!-- SINGLE ACTION -->
+    <div class="mt-4">
+      <details class="group">
+        <summary class="btn btn-primary w-full text-center cursor-pointer">
+          ⚙️ Ver opciones
+        </summary>
 
-            <div class="ficha-line">
-              <b>Monto:</b> ${{ "%.2f"|format(r.amount or 0) }}
-            </div>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
 
-            <div class="ficha-line">
-              <b>Interés:</b> ${{ "%.2f"|format(monthly_amt) }} / mes
-            </div>
+          <a href="{{ url_for('loan_ticket', loan_id=r.id) }}"
+             class="btn btn-ghost">🧾 Recibo</a>
 
-            <div class="ficha-line">
-              <b>Estado:</b>
-              <span class="estado {{ r.status|lower }}">{{ r.status }}</span>
-            </div>
+          <a href="{{ url_for('payment_page', loan_id=r.id) }}"
+             class="btn btn-ok">💵 Pago</a>
 
-            <div class="ficha-actions">
-              <!-- 🧾 RECIBO / TICKET -->
-              <a href="{{ url_for('loan_ticket', loan_id=r.id) }}">🧾 Recibo</a>
+          <a href="{{ url_for('edit_loan_page', loan_id=r.id) }}"
+             class="btn btn-ghost">✏️ Editar</a>
 
-              <!-- ✏️ EDITAR -->
-              <a href="{{ url_for('edit_loan_page', loan_id=r.id) }}">✏️ Editar</a>
+          <a href="{{ url_for('empeno_legal_view', loan_id=r.id) }}"
+             class="btn btn-ghost">📜 Documento</a>
 
-              <!-- 💵 PAGO -->
-              <a href="{{ url_for('payment_page', loan_id=r.id) }}">💵 Pago</a>
+          <a href="{{ url_for('loan_confirm_delete', loan_id=r.id) }}"
+             class="btn btn-danger col-span-2">
+             🗑 Eliminar
+          </a>
 
-              <!-- 📜 DOCUMENTO LEGAL -->
-              <a href="{{ url_for('empeno_legal_view', loan_id=r.id) }}">📜 Documento legal</a>
+        </div>
+      </details>
+    </div>
 
-              <!-- 🗑 ELIMINAR -->
-              <a href="{{ url_for('loan_confirm_delete', loan_id=r.id) }}">🗑 Eliminar</a>
-            </div>
-
-          </div>
-
-        </td>
-      </tr>
-      {% endfor %}
-
-      </tbody>
-    </table>
   </div>
+  {% endfor %}
+
+  {% if not rows %}
+  <div class="text-center opacity-70 py-12">
+    No hay empeños registrados
+  </div>
+  {% endif %}
+
 </section>
 """
 
@@ -4795,6 +4630,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
