@@ -1235,7 +1235,8 @@ IOS_PWA_STYLE = """
 body {
   background: linear-gradient(180deg, #0b0b0b, #111);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-  font-size: 15px;
+  font-size: 16px; /* 🔥 clave para móvil */
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ===== GLASS BASE ===== */
@@ -1245,6 +1246,24 @@ body {
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+
+/* ===== INPUTS MÓVIL (CLAVE) ===== */
+input, select, textarea {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  color: #000;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280;
 }
 
 /* ===== BOTONES ===== */
@@ -4635,6 +4654,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
