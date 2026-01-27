@@ -1439,7 +1439,6 @@ def empenos_index():
 
 
 
-
 from datetime import datetime, date
 from contextlib import closing
 
@@ -1479,65 +1478,64 @@ def view_empeno(loan_id):
     interest_today = row["amount"] * daily_rate * days
     total_today = row["amount"] + interest_today
 
-  # =========================
-# HTML
-# =========================
-body = '''
-<div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
+    # =========================
+    # HTML
+    # =========================
+    body = '''
+    <div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
 
-  <div class="ficha-header mb-4">
-    <div>Empeño #{id}</div>
-    <div>{created}</div>
-  </div>
+      <div class="ficha-header mb-4">
+        <div>Empeño #{id}</div>
+        <div>{created}</div>
+      </div>
 
-  <div class="grid md:grid-cols-2 gap-4 text-sm">
+      <div class="grid md:grid-cols-2 gap-4 text-sm">
 
-    <div>
-      <div class="ficha-line"><b>Cliente:</b> {customer}</div>
-      <div class="ficha-line"><b>Teléfono:</b> {phone}</div>
-      <div class="ficha-line"><b>Artículo:</b> {item}</div>
-      <div class="ficha-line"><b>Peso:</b> {weight} g</div>
+        <div>
+          <div class="ficha-line"><b>Cliente:</b> {customer}</div>
+          <div class="ficha-line"><b>Teléfono:</b> {phone}</div>
+          <div class="ficha-line"><b>Artículo:</b> {item}</div>
+          <div class="ficha-line"><b>Peso:</b> {weight} g</div>
+        </div>
+
+        <div>
+          <div class="ficha-line"><b>Capital:</b> ${amount}</div>
+          <div class="ficha-line"><b>Interés mensual:</b> {rate}%</div>
+          <div class="ficha-line"><b>Interés al día:</b> ${interest}</div>
+          <div class="ficha-line"><b>Total hoy:</b> ${total}</div>
+        </div>
+
+      </div>
+
+      <div class="ficha-line mt-4">
+        <b>Inició:</b> {start}
+      </div>
+
+      <div class="ficha-actions mt-6">
+        <a href="{pay_url}">Pago</a>
+        <a href="{edit_url}">Editar</a>
+        <a href="{back_url}">Volver</a>
+      </div>
+
     </div>
+    '''.format(
+        id=row["id"],
+        created=row["created_at"][:10],
+        customer=row["customer_name"],
+        phone=row["phone"],
+        item=row["item_name"],
+        weight=f"{row['weight_grams']:.2f}",
+        amount=f"{row['amount']:.2f}",
+        rate=f"{row['interest_rate']:.2f}",
+        interest=f"{interest_today:.2f}",
+        total=f"{total_today:.2f}",
+        start=start_date,
+        pay_url=url_for("payment_page", loan_id=row["id"]),
+        edit_url=url_for("edit_loan_page", loan_id=row["id"]),
+        back_url=url_for("empenos_index")
+    )
 
-    <div>
-      <div class="ficha-line"><b>Capital:</b> ${amount}</div>
-      <div class="ficha-line"><b>Interés mensual:</b> {rate}%</div>
-      <div class="ficha-line"><b>Interés al día:</b> ${interest}</div>
-      <div class="ficha-line"><b>Total hoy:</b> ${total}</div>
-    </div>
-
-  </div>
-
-  <div class="ficha-line mt-4">
-    <b>Inició:</b> {start}
-  </div>
-
-  <div class="ficha-actions mt-6">
-    <a href="{pay_url}">💰 Pago</a>
-    <a href="{edit_url}">✏️ Editar</a>
-    <a href="{back_url}">⬅ Volver</a>
-  </div>
-
-</div>
-'''.format(
-    id=row["id"],
-    created=row["created_at"][:10],
-    customer=row["customer_name"],
-    phone=row["phone"],
-    item=row["item_name"],
-    weight=f"{row['weight_grams']:.2f}",
-    amount=f"{row['amount']:.2f}",
-    rate=f"{row['interest_rate']:.2f}",
-    interest=f"{interest_today:.2f}",
-    total=f"{total_today:.2f}",
-    start=start_date,
-    pay_url=url_for("payment_page", loan_id=row["id"]),
-    edit_url=url_for("edit_loan_page", loan_id=row["id"]),
-    back_url=url_for("empenos_index")
-)
-
-return render_page(body, title=f"Empeño #{loan_id}", active="loans")
-
+    return render_page(body, title=f"Empeño #{loan_id}", active="loans")
 
 
 
@@ -4660,6 +4658,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
