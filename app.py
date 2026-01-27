@@ -1660,73 +1660,76 @@ with closing(get_db()) as conn:
 return redirect(url_for("empenos_index"))
 
 
-    # =========================
-    # GET → FORMULARIO
-    # =========================
-    today = date.today().isoformat()
-    default_rate = float(get_setting("default_interest_rate", "20"))
+   # =========================
+# GET → FORMULARIO
+# =========================
+today = date.today().isoformat()
+default_rate = float(get_setting("default_interest_rate", "20"))
 
-    body = f"""
-    <div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
-      <h2 class="text-xl font-bold text-yellow-300 mb-4">
-        ➕ Nuevo Empeño
-      </h2>
+body = '''
+<div class="max-w-3xl mx-auto glass p-6 rounded-2xl">
+  <h2 class="text-xl font-bold text-yellow-300 mb-4">
+    ➕ Nuevo Empeño
+  </h2>
 
-      <form method="post" enctype="multipart/form-data" class="space-y-4">
+  <form method="post" enctype="multipart/form-data" class="space-y-4">
 
-        <input name="customer_name" placeholder="Nombre del cliente" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="customer_name" placeholder="Nombre del cliente" required
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="customer_id" placeholder="ID del cliente" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="customer_id" placeholder="ID del cliente" required
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="phone" placeholder="Teléfono" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="phone" placeholder="Teléfono" required
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="item_name" placeholder="Artículo" required
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="item_name" placeholder="Artículo" required
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="weight_grams" type="number" step="0.01"
-          placeholder="Peso (g)"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="weight_grams" type="number" step="0.01"
+      placeholder="Peso (g)"
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="amount" type="number" step="0.01" required
-          placeholder="Monto entregado"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="amount" type="number" step="0.01" required
+      placeholder="Monto entregado"
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <input name="interest_rate" type="number" step="0.01"
-          value="{default_rate}"
-          placeholder="Interés mensual (%)"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <input name="interest_rate" type="number" step="0.01"
+      value="{rate}"
+      placeholder="Interés mensual (%)"
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <label class="text-sm text-yellow-200">
-          Fecha de inicio del empeño
-        </label>
-        <input name="start_date" type="date" required
-          value="{today}"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <label class="text-sm text-yellow-200">
+      Fecha de inicio del empeño
+    </label>
+    <input name="start_date" type="date" required
+      value="{today}"
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <label class="text-sm text-yellow-200">
-          Foto del artículo
-        </label>
-        <input name="photo" type="file" accept="image/*"
-          class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
+    <label class="text-sm text-yellow-200">
+      Foto del artículo
+    </label>
+    <input name="photo" type="file" accept="image/*"
+      class="w-full rounded-xl border border-yellow-200/30 bg-black/40 p-2"/>
 
-        <div class="flex gap-2 pt-4">
-          <button class="gold-gradient px-6 py-3 rounded-xl font-extrabold">
-            Guardar empeño
-          </button>
-          <a href="/empenos"
-             class="px-6 py-3 rounded-xl border border-yellow-200/30">
-            Cancelar
-          </a>
-        </div>
-
-      </form>
+    <div class="flex gap-2 pt-4">
+      <button class="gold-gradient px-6 py-3 rounded-xl font-extrabold">
+        Guardar empeño
+      </button>
+      <a href="/empenos"
+         class="px-6 py-3 rounded-xl border border-yellow-200/30">
+        Cancelar
+      </a>
     </div>
-    """
 
-    return render_page(body, title="Nuevo empeño", active="loans")
+  </form>
+</div>
+'''.format(
+    today=today,
+    rate=f"{default_rate:.2f}"
+)
+
+return render_page(body, title="Nuevo empeño", active="loans")
 
 
 # ====== Editar, ticket ======
@@ -4740,6 +4743,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
