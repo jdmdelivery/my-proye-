@@ -632,27 +632,21 @@ BASE_SHELL = """
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* ================= DATE PICKER FIX ================= */
 input[type="date"]{
   background-color: rgba(255,255,255,0.95) !important;
-  color: #111827 !important;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-weight: 600;
-}
-input[type="date"]::-webkit-calendar-picker-indicator{
-  cursor:pointer;
+  color:#111827 !important;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:600;
 }
 input[type="date"]:focus{
   outline:none;
   box-shadow:0 0 0 3px rgba(250,204,21,.35);
 }
 
-/* ================= iPHONE GLASS ================= */
 :root{
   --gold:#facc15;
   --gold-dark:#d97706;
-  --bg:#020617;
 }
 
 html,body{
@@ -664,7 +658,6 @@ html,body{
   -webkit-font-smoothing:antialiased;
 }
 
-/* ================= HEADER ================= */
 header{
   background:linear-gradient(135deg,#facc15,#f59e0b);
   box-shadow:0 20px 40px rgba(0,0,0,.45);
@@ -679,16 +672,12 @@ header{
   align-items:center;
   justify-content:center;
   font-size:28px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
 }
 
-/* ================= NAV ================= */
 .nav a{
   padding:10px 16px;
   border-radius:16px;
   font-weight:700;
-  font-size:15px;
-  transition:.25s;
 }
 .nav a.active,
 .nav a:hover{
@@ -696,60 +685,20 @@ header{
   color:#fff;
 }
 
-/* ================= GLASS ================= */
 .glass{
-  background:linear-gradient(
-    180deg,
-    rgba(255,255,255,.12),
-    rgba(255,255,255,.03)
-  );
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.03));
   backdrop-filter:blur(18px);
   border-radius:22px;
   border:1px solid rgba(255,255,255,.12);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.1),
-    0 30px 60px rgba(0,0,0,.55);
 }
 
-/* ================= BUTTONS ================= */
-button,.btn{
-  border-radius:18px;
-  padding:14px 18px;
-  font-weight:800;
-  transition:.25s;
-}
-button:active{ transform:scale(.97); }
-
-.gold-gradient{
-  background:linear-gradient(135deg,#facc15,#f59e0b);
-  color:#020617;
-  box-shadow:0 12px 25px rgba(250,204,21,.45);
-}
-
-/* ================= TABLE ================= */
-table{
-  border-collapse:separate;
-  border-spacing:0 12px;
-}
-thead th{
-  color:var(--gold);
-  font-weight:800;
-}
-tbody tr{
-  background:rgba(0,0,0,.35);
-  border-radius:18px;
-}
-
-/* ================= CARDS ================= */
 .empeno-ficha{
   background:linear-gradient(135deg,#020617,#020617cc);
   border-radius:20px;
   padding:16px;
   border:1px solid rgba(250,204,21,.4);
-  box-shadow:0 20px 40px rgba(0,0,0,.6);
 }
 
-/* ================= TOUCH ================= */
 *{ -webkit-tap-highlight-color:transparent; }
 
 footer{
@@ -764,18 +713,16 @@ footer{
 <header>
   <div class="max-w-7xl mx-auto px-4 py-6">
 
-    <!-- LOGO + TITULO -->
     <div class="flex items-center justify-between gap-4 mb-4">
       <div class="app-logo">💎</div>
 
-      <h1 class="text-3xl md:text-4xl font-extrabold text-black tracking-tight text-center flex-1">
+      <h1 class="text-3xl md:text-4xl font-extrabold text-black text-center flex-1">
         {{ brand }}
       </h1>
 
       <div class="app-logo">💎</div>
     </div>
 
-    <!-- NAV -->
     <nav class="nav flex flex-wrap gap-2 justify-center">
       <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">Inicio</a>
       <a href="{{ url_for('empenos_index') }}" class="{{ 'active' if active=='loans' else '' }}">Empeños</a>
@@ -810,45 +757,6 @@ if ("serviceWorker" in navigator) {
 </body>
 </html>
 """
-
-
-
-      <nav class="nav flex flex-wrap gap-2 justify-center">
-        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active=='dashboard' else '' }}">Inicio</a>
-        <a href="{{ url_for('empenos_index') }}" class="{{ 'active' if active=='loans' else '' }}">Empeños</a>
-        <a href="{{ url_for('cash') }}" class="{{ 'active' if active=='cash' else '' }}">Caja</a>
-        <a href="{{ url_for('reports') }}" class="{{ 'active' if active=='reports' else '' }}">Reportes</a>
-        <a href="{{ url_for('inventory') }}" class="{{ 'active' if active=='inventory' else '' }}">Inventario</a>
-        <a href="{{ url_for('sales_page') }}" class="{{ 'active' if active=='sales' else '' }}">Ventas</a>
-        <a href="{{ url_for('users_page') }}" class="{{ 'active' if active=='users' else '' }}">Usuarios</a>
-        <a href="{{ url_for('settings_page') }}" class="{{ 'active' if active=='settings' else '' }}">Config</a>
-        <a href="{{ url_for('logout') }}">Salir</a>
-      </nav>
-    </div>
-  </div>
-</header>
-
-<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
-  {{ body|safe }}
-</main>
-
-<footer class="text-center py-6">
-  © {{ now.year if now else '' }} {{ brand }}
-</footer>
-
-<!-- ===== Service Worker ===== -->
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/static/sw.js")
-      .then(() => console.log("✅ PWA activa (base)"))
-      .catch(err => console.error("❌ SW error", err));
-  }
-</script>
-
-</body>
-</html>
-"""
-
 
 
 def render_page(body_html, title="", active=""):
@@ -4657,6 +4565,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
