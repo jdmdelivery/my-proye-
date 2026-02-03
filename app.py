@@ -2295,7 +2295,7 @@ hr {{
   cursor: pointer;
 }}
 
-/* ================= IMPRESIÓN (FIX DEFINITIVO) ================= */
+/* ================= IMPRESIÓN ================= */
 @media print {{
   html, body {{
     background: white !important;
@@ -2368,7 +2368,9 @@ hr {{
   </button>
 </div>
 """
-return render_page(body, title="Comprobante de empeño", active="loans")
+
+    return render_page(body, title="Comprobante de empeño", active="loans")
+
 
       
 
@@ -4859,6 +4861,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
