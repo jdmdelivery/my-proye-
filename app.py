@@ -1337,6 +1337,44 @@ button, a.btn, .btn {
 .ios-card.blue .ios-glow{
   background:radial-gradient(circle at 30% 30%, rgba(56,189,248,.35), transparent 45%);
 }
+/* ===== FIX iOS INPUTS (EXTRA SEGURO) ===== */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 1 !important;
+  -webkit-text-fill-color: #111 !important;
+}
+
+/* Evita que iOS pinte gris los inputs */
+input:not([type="file"]),
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: #111111 !important;
+}
+
+/* Placeholder visible */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* File input (Choose File en iOS) */
+input[type="file"] {
+  background: transparent !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* Evita zoom raro en Safari */
+input,
+select,
+textarea,
+button {
+  font-size: 16px !important;
+}
+
 
 @keyframes glowMove{
   0%{transform:translate(0,0)}
@@ -4861,6 +4899,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
