@@ -1975,49 +1975,149 @@ def build_ticket_message(row, interest_today, total_today, interest_at_due, tota
 
 TICKET_TPL = """
 <style>
-@page { size:auto; margin:10mm; }
+
+/* ================= PÁGINA ================= */
+@page {
+  size: auto;
+  margin: 10mm;
+  background: white;
+}
+
+/* ================= BASE ================= */
+html, body {
+  background: #fff;
+  margin: 0;
+  padding: 0;
+}
 
 .ticket{
-  max-width:420px;margin:30px auto;background:#fff;color:#111;
+  max-width:420px;
+  margin:30px auto;
+  background:#fff;
+  color:#111;
   border-radius:16px;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  box-shadow:0 12px 30px rgba(0,0,0,.15);
 }
 
 .header{
-  background:#000;color:#d4af37;text-align:center;
-  padding:20px 16px;border-radius:16px 16px 0 0;
+  background:#000;
+  color:#d4af37;
+  text-align:center;
+  padding:20px 16px;
+  border-radius:16px 16px 0 0;
 }
-.header img{width:70px;margin:0 auto 6px;display:block;}
-.header h1{margin:0;font-size:22px;font-weight:900;}
 
-.section{padding:16px 20px;font-size:14px;}
-.section-title{font-weight:800;border-bottom:1px solid #eee;margin-bottom:6px;padding-bottom:4px;}
+.header img{
+  width:70px;
+  margin:0 auto 6px;
+  display:block;
+}
 
-.row{display:flex;justify-content:space-between;margin:5px 0;}
-.row span{color:#555;}
+.header h1{
+  margin:0;
+  font-size:22px;
+  font-weight:900;
+}
+
+.section{
+  padding:16px 20px;
+  font-size:14px;
+}
+
+.section-title{
+  font-weight:800;
+  border-bottom:1px solid #eee;
+  margin-bottom:6px;
+  padding-bottom:4px;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  margin:5px 0;
+}
+
+.row span{
+  color:#555;
+}
 
 .highlight{
-  background:#fff8eb;border:1px solid #f1d8a8;
-  border-radius:12px;padding:12px;margin-top:8px;
+  background:#fff8eb;
+  border:1px solid #f1d8a8;
+  border-radius:12px;
+  padding:12px;
+  margin-top:8px;
 }
 
-.total{font-size:18px;font-weight:900;}
+.total{
+  font-size:18px;
+  font-weight:900;
+}
 
-.msg{text-align:center;font-size:13px;margin-top:10px;color:#333;}
-.contact{text-align:center;font-size:12px;margin-top:12px;line-height:1.6;color:#333;}
+.msg{
+  text-align:center;
+  font-size:13px;
+  margin-top:10px;
+  color:#333;
+}
 
-.actions{display:flex;gap:10px;padding:16px 20px 20px;}
-.btn{flex:1;padding:12px;border-radius:10px;font-weight:700;border:none;cursor:pointer;}
+.contact{
+  text-align:center;
+  font-size:12px;
+  margin-top:12px;
+  line-height:1.6;
+  color:#333;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  padding:16px 20px 20px;
+}
+
+.btn{
+  flex:1;
+  padding:12px;
+  border-radius:10px;
+  font-weight:700;
+  border:none;
+  cursor:pointer;
+}
+
 .print{background:#111;color:#d4af37;}
 .whatsapp{background:#16a34a;color:#fff;}
 .sms{background:#2563eb;color:#fff;}
 
-@media print{
-  body{background:#fff!important;}
-  body *{display:none!important;}
-  .ticket,.ticket *{display:block!important;}
-  .ticket{margin:0!important;border-radius:0!important;box-shadow:none!important;}
-  .actions{display:none!important;}
+/* ================= IMPRESIÓN (FIX DEFINITIVO) ================= */
+@media print {
+
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .ticket, .ticket * {
+    visibility: visible !important;
+    background: white !important;
+  }
+
+  .ticket {
+    margin: 0 auto !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .actions {
+    display: none !important;
+  }
 }
 </style>
 
@@ -2081,6 +2181,7 @@ TICKET_TPL = """
   <button class="btn print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 """
+
 
 # ======================================================
 # RUTA DEL RECIBO
@@ -2348,7 +2449,8 @@ def payment_receipt(payment_id: int):
     if saldo_pendiente < 0:
         saldo_pendiente = 0.0
 
-   body = f"""
+    # ================= HTML =================
+    body = f"""
 <style>
 /* ================= ESTILO BASE ================= */
 .pay-wrap {{
@@ -2447,7 +2549,7 @@ def payment_receipt(payment_id: int):
   cursor: pointer;
 }}
 
-/* ================= IMPRESIÓN (FIX DEFINITIVO) ================= */
+/* ================= IMPRESIÓN ================= */
 @media print {{
   html, body {{
     background: white !important;
@@ -2540,7 +2642,9 @@ def payment_receipt(payment_id: int):
   </div>
 </div>
 """
-return render_page(body, title="Recibo de pago", active="loans")
+
+    return render_page(body, title="Recibo de pago", active="loans")
+
 
 
 
@@ -4755,6 +4859,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
