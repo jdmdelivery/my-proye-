@@ -2124,99 +2124,152 @@ def loan_ticket(loan_id: int):
         return "No encontrado", 404
 
     body = f"""
-    <style>
-      .ticket {{
-        max-width: 420px;
-        margin: 30px auto;
-        background: #fff;
-        color: #111;
-        font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-        border-radius: 14px;
-        padding: 20px;
-        box-shadow: 0 12px 30px rgba(0,0,0,.25);
-      }}
-      .center {{ text-align: center; }}
-      .row {{
-        display: flex;
-        justify-content: space-between;
-        margin: 6px 0;
-        font-size: 14px;
-      }}
-      .row span {{ color: #555; }}
-      .row strong {{ font-weight: 600; }}
-      hr {{ margin: 12px 0; }}
-      .badge {{
-        display:inline-block;
-        background:#111;
-        color:#d4af37;
-        padding:4px 10px;
-        border-radius:999px;
-        font-size:11px;
-        margin-top:4px;
-      }}
-      .footer {{
-        text-align: center;
-        font-size: 12px;
-        color: #555;
-        margin-top: 14px;
-      }}
-      @media print {{
-        body * {{ visibility: hidden; }}
-        .ticket, .ticket * {{ visibility: visible; }}
-        .ticket {{ margin: 0; box-shadow: none; }}
-      }}
-    </style>
+<style>
+/* ================= ESTILO BASE ================= */
+.ticket {{
+  max-width: 380px;
+  margin: 30px auto;
+  padding: 20px;
+  background: #fff;
+  color: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+}}
 
-    <div class="ticket">
-      <div class="center">
-        <h2>World Jewelry</h2>
-        <div class="badge">COMPROBANTE DE EMPEÑO</div>
-        <small>Este monto no cambia con pagos</small>
-      </div>
+.center {{
+  text-align: center;
+}}
 
-      <hr>
+.badge {{
+  display: inline-block;
+  margin: 6px 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #111;
+  color: #d4af37;
+  border-radius: 999px;
+}}
 
-      <div class="row"><span>Empeño #</span><strong>{r['id']}</strong></div>
-      <div class="row"><span>Fecha</span><strong>{r['created_at']}</strong></div>
-      <div class="row"><span>Cliente</span><strong>{r['customer_name']}</strong></div>
-      <div class="row"><span>ID</span><strong>{r['customer_id']}</strong></div>
-      <div class="row"><span>Teléfono</span><strong>{r['phone']}</strong></div>
+.row {{
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin: 6px 0;
+}}
 
-      <hr>
+.row span {{
+  color: #555;
+}}
 
-      <div class="row"><span>Artículo</span><strong>{r['item_name']}</strong></div>
-      <div class="row"><span>Peso</span><strong>{r['weight_grams']} g</strong></div>
-      <div class="row">
-        <span>Monto entregado</span>
-        <strong>$ {r['monto_entregado']:.2f}</strong>
-      </div>
-      <div class="row"><span>Vence</span><strong>{r['due_date']}</strong></div>
+.row strong {{
+  font-weight: 600;
+}}
 
-      <hr>
+hr {{
+  border: none;
+  height: 1px;
+  background: #eee;
+  margin: 14px 0;
+}}
 
-      <div class="footer">
-        Este documento certifica el monto entregado al cliente.<br>
-        No se modifica por pagos posteriores.<br><br>
-        Gracias por su confianza 🙏<br>
-        <b>World Jewelry</b>
-      </div>
+.footer {{
+  text-align: center;
+  font-size: 12px;
+  color: #444;
+  margin-top: 14px;
+  line-height: 1.4;
+}}
 
-      <button onclick="window.print()" style="
-        width:100%;
-        margin-top:14px;
-        padding:10px;
-        background:#111;
-        color:#d4af37;
-        border:none;
-        border-radius:10px;
-        font-weight:700;
-        cursor:pointer;">
-        🖨️ Imprimir comprobante
-      </button>
-    </div>
-    """
+.print-btn {{
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  background: #111;
+  color: #d4af37;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}}
 
-    return render_page(body, title="Comprobante de empeño", active="loans")
+/* ================= IMPRESIÓN (FIX DEFINITIVO) ================= */
+@media print {{
+  html, body {{
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }}
+
+  body * {{
+    visibility: hidden;
+    background: transparent !important;
+  }}
+
+  .ticket, .ticket * {{
+    visibility: visible;
+    background: white !important;
+  }}
+
+  .ticket {{
+    margin: 0 auto !important;
+    box-shadow: none !important;
+  }}
+
+  button {{
+    display: none !important;
+  }}
+}}
+
+@page {{
+  margin: 10mm;
+  background: white;
+}}
+</style>
+
+<div class="ticket">
+  <div class="center">
+    <h2>World Jewelry</h2>
+    <div class="badge">COMPROBANTE DE EMPEÑO</div>
+    <small>Este monto no cambia con pagos</small>
+  </div>
+
+  <hr>
+
+  <div class="row"><span>Empeño #</span><strong>{r['id']}</strong></div>
+  <div class="row"><span>Fecha</span><strong>{r['created_at']}</strong></div>
+  <div class="row"><span>Cliente</span><strong>{r['customer_name']}</strong></div>
+  <div class="row"><span>ID</span><strong>{r['customer_id']}</strong></div>
+  <div class="row"><span>Teléfono</span><strong>{r['phone']}</strong></div>
+
+  <hr>
+
+  <div class="row"><span>Artículo</span><strong>{r['item_name']}</strong></div>
+  <div class="row"><span>Peso</span><strong>{r['weight_grams']} g</strong></div>
+  <div class="row">
+    <span>Monto entregado</span>
+    <strong>$ {r['monto_entregado']:.2f}</strong>
+  </div>
+  <div class="row"><span>Vence</span><strong>{r['due_date']}</strong></div>
+
+  <hr>
+
+  <div class="footer">
+    Este documento certifica el monto entregado al cliente.<br>
+    No se modifica por pagos posteriores.<br><br>
+    Gracias por su confianza 🙏<br>
+    <b>World Jewelry</b>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">
+    🖨️ Imprimir comprobante
+  </button>
+</div>
+"""
+return render_page(body, title="Comprobante de empeño", active="loans")
+
+      
 
 
 @app.route("/pago/recibo/<int:payment_id>")
@@ -2295,9 +2348,9 @@ def payment_receipt(payment_id: int):
     if saldo_pendiente < 0:
         saldo_pendiente = 0.0
 
-    # ================= FACTURA FINAL =================
-    body = f"""
+   body = f"""
 <style>
+/* ================= ESTILO BASE ================= */
 .pay-wrap {{
   max-width: 430px;
   margin: 40px auto;
@@ -2308,47 +2361,65 @@ def payment_receipt(payment_id: int):
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0,0,0,.2);
 }}
+
 .pay-header {{
   text-align: center;
   padding: 24px 20px 18px;
 }}
+
 .pay-header img {{
   width: 90px;
   margin: 0 auto 8px;
   display: block;
 }}
+
 .pay-header h1 {{
   margin: 0;
   font-size: 20px;
   font-weight: 800;
 }}
-.pay-header small {{ color: #555; }}
+
+.pay-header small {{
+  color: #555;
+}}
+
 .divider {{
   height: 1px;
   background: #eee;
   margin: 14px 0;
 }}
+
 .pay-body {{
   padding: 0 22px 22px;
   font-size: 14px;
 }}
+
 .row {{
   display: flex;
   justify-content: space-between;
   margin: 6px 0;
 }}
-.row span {{ color: #555; }}
-.row strong {{ font-weight: 600; }}
+
+.row span {{
+  color: #555;
+}}
+
+.row strong {{
+  font-weight: 600;
+}}
+
 .total {{
   font-size: 20px;
   font-weight: 800;
 }}
+
 .thanks {{
   text-align: center;
   font-size: 13px;
   color: #444;
   margin-top: 18px;
 }}
+
 .contact {{
   text-align: center;
   font-size: 12px;
@@ -2356,12 +2427,14 @@ def payment_receipt(payment_id: int):
   margin-top: 10px;
   line-height: 1.5;
 }}
+
 .footer {{
   text-align: center;
   font-size: 11px;
   color: #777;
   margin-top: 14px;
 }}
+
 .print-btn {{
   width: 100%;
   margin-top: 16px;
@@ -2373,10 +2446,39 @@ def payment_receipt(payment_id: int):
   font-weight: 700;
   cursor: pointer;
 }}
+
+/* ================= IMPRESIÓN (FIX DEFINITIVO) ================= */
 @media print {{
-  body * {{ visibility: hidden; }}
-  .pay-wrap, .pay-wrap * {{ visibility: visible; }}
-  .pay-wrap {{ box-shadow: none; margin: 0; }}
+  html, body {{
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }}
+
+  body * {{
+    visibility: hidden;
+    background: transparent !important;
+  }}
+
+  .pay-wrap, .pay-wrap * {{
+    visibility: visible;
+    background: white !important;
+  }}
+
+  .pay-wrap {{
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }}
+
+  button {{
+    display: none !important;
+  }}
+}}
+
+@page {{
+  margin: 10mm;
+  background: white;
 }}
 </style>
 
@@ -2438,8 +2540,7 @@ def payment_receipt(payment_id: int):
   </div>
 </div>
 """
-
-    return render_page(body, title="Recibo de pago", active="loans")
+return render_page(body, title="Recibo de pago", active="loans")
 
 
 
@@ -4654,6 +4755,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
