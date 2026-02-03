@@ -1319,6 +1319,45 @@ button, a.btn, .btn {
   font-weight:900;
   letter-spacing:-1px;
 }
+/* ===== FIX TEXTO BORROSO iOS (FORZAR NEGRO REAL) ===== */
+input,
+select,
+textarea {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important; /* CLAVE */
+  opacity: 1 !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+/* Cuando el input tiene valor */
+input:not(:placeholder-shown),
+textarea:not(:placeholder-shown) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* Placeholder (gris claro, NO borroso) */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* Evita efecto "disabled" fantasma en iOS */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 1 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* Anti-blur extra en iOS */
+input,
+textarea {
+  -webkit-font-smoothing: auto !important;
+}
+
 
 /* ===== GLOW ===== */
 .ios-glow{
@@ -4899,6 +4938,7 @@ if __name__ == "__main__":
 
     print("=== Iniciando World Jewelry en local ===")
     app.run(host="0.0.0.0", port=5010, debug=False)
+
 
 
 
